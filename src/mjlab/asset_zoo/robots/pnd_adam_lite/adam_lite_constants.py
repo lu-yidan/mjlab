@@ -90,7 +90,7 @@ ADAM_LITE_ROBOT_CFG = EntityCfg(
       "^ankleRoll_Right$": 0.0,
       # Waist
       "^waistRoll$": 0.0,
-      "^waistPitch$": 0.0,
+      "^waistPitch$": 0.08,
       "^waistYaw$": 0.0,
       # Left arm
       "^shoulderPitch_Left$": 0.0,

@@ -177,13 +177,13 @@ class RewardCfg:
   track_lin_vel_exp: RewardTerm = term(
     RewardTerm,
     func=mdp.track_lin_vel_exp,
-    weight=1.0,
+    weight=2.0,
     params={"command_name": "twist", "std": math.sqrt(0.25)},
   )
   track_ang_vel_exp: RewardTerm = term(
     RewardTerm,
     func=mdp.track_ang_vel_exp,
-    weight=1.0,
+    weight=2.0,
     params={"command_name": "twist", "std": math.sqrt(0.25)},
   )
   pose: RewardTerm = term(

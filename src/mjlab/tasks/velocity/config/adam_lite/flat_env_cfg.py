@@ -61,7 +61,7 @@ class AdamLiteFlatEnvCfg_PLAY(AdamLiteFlatEnvCfg):
     self.curriculum.terrain_levels = None
     self.curriculum.command_vel = None
     assert self.events.push_robot is not None
-    self.events.push_robot.params["velocity_range"] = {"x": (-0.5, 0.5), "y": (-0.5, 0.5)}
+    self.events.push_robot.params["velocity_range"] = {"x": (-0.2, 0.2), "y": (-0.2, 0.2)}
     self.episode_length_s = int(1e9)
 
     # 姿态奖励的std需要是“关节名正则 -> 标准差”的字典。
@@ -76,8 +76,8 @@ class AdamLiteFlatEnvCfg_PLAY(AdamLiteFlatEnvCfg):
       r".*ankleRoll.*": 0.10,
       # Waist
       r".*waistYaw.*": 0.15,
-      r".*waistRoll.*": 0.08,
-      r".*waistPitch.*": 0.10,
+      r".*waistRoll.*": 0.12,
+      r".*waistPitch.*": 0.15,
       # Arms
       r".*shoulderPitch.*": 0.35,
       r".*shoulderRoll.*": 0.15,
