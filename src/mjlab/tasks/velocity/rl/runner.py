@@ -8,10 +8,20 @@ from mjlab.tasks.velocity.rl.exporter import (
   attach_onnx_metadata,
   export_velocity_policy_as_onnx,
 )
+from mjlab.rl.safety import clamp_policy_std, patch_global_normal_clamp
 
 
 class VelocityOnPolicyRunner(OnPolicyRunner):
   env: RslRlVecEnvWrapper
+
+  def __init__(self, env, train_cfg, log_dir: str | None = None, device: str = "cpu"):
+    super().__init__(env, train_cfg, log_dir, device)
+    # Clamp policy distribution std to avoid invalid Normal std during sampling.
+    try:
+      clamp_policy_std(self.alg.policy, min_std=1e-6)
+      patch_global_normal_clamp(min_std=1e-6)
+    except Exception:
+      pass
 
   def save(self, path: str, infos=None):
     """Save the model and training information."""

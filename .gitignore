@@ -14,3 +14,4 @@ motions/
 artifacts/
 .venv/
 render_robots.py
+.idea/
