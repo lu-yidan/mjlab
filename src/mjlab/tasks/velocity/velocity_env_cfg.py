@@ -7,8 +7,6 @@ Robot-specific configurations call the factory and customize as needed.
 import math
 from dataclasses import replace
 
-import torch
-
 from mjlab.envs import ManagerBasedRlEnvCfg
 from mjlab.envs import mdp as envs_mdp
 from mjlab.envs.mdp import dr
@@ -31,13 +29,6 @@ from mjlab.terrains import TerrainEntityCfg
 from mjlab.terrains.config import ROUGH_TERRAINS_CFG
 from mjlab.utils.noise import UniformNoiseCfg as Unoise
 from mjlab.viewer import ViewerConfig
-
-
-def action_rate_l2(env) -> torch.Tensor:
-  """Penalize the rate of change of the actions using L2 squared kernel."""
-  return torch.sum(
-    torch.square(env.action_manager.action - env.action_manager.prev_action), dim=1
-  )
 
 
 def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
@@ -123,12 +114,6 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
     ),
   }
 
-  metrics = {
-    "test1": MetricsTermCfg(
-      func=action_rate_l2,
-    )
-  }
-
   observations = {
     "actor": ObservationGroupCfg(
       terms=actor_terms,
@@ -139,6 +124,16 @@ def make_velocity_env_cfg() -> ManagerBasedRlEnvCfg:
       terms=critic_terms,
       concatenate_terms=True,
       enable_corruption=False,
+    ),
+  }
+
+  ##
+  # Metrics
+  ##
+
+  metrics = {
+    "mean_action_acc": MetricsTermCfg(
+      func=mdp.mean_action_acc,
     ),
   }
 
