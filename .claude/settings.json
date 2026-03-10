@@ -20,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "uv run ruff format"
+            "command": "input=$(cat); echo \"$input\" | grep -q 'RoboMimicDeploy_G1' || uv run ruff format"
           }
         ]
       }

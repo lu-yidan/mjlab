@@ -138,6 +138,7 @@ indent-width = 2
 exclude = [
   "src/mjlab/utils/lab_api",
   "typings",
+  "RoboMimicDeploy_G1",
 ]
 
 [tool.ruff.lint]
