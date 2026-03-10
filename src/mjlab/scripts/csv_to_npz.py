@@ -276,11 +276,20 @@ def run_sim(
         robot.data.body_link_ang_vel_w[0, :].cpu().numpy().copy()
       )
 
+      # Allow small numerical differences between analytical and simulated velocities.
+      # We only care that the motion is qualitatively correct; tiny eps-level
+      # mismatches (e.g. 1e-5) shouldn't stop the conversion.
       torch.testing.assert_close(
-        robot.data.body_link_lin_vel_w[0, 0], motion_base_lin_vel[0]
+        robot.data.body_link_lin_vel_w[0, 0],
+        motion_base_lin_vel[0],
+        rtol=1e-4,
+        atol=1e-4,
       )
       torch.testing.assert_close(
-        robot.data.body_link_ang_vel_w[0, 0], motion_base_ang_vel[0]
+        robot.data.body_link_ang_vel_w[0, 0],
+        motion_base_ang_vel[0],
+        rtol=1e-4,
+        atol=1e-4,
       )
 
       frame_count += 1
