@@ -56,7 +56,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="Mar 09, 2026"/>
+    <meta name="docbuild:last-update" content="Mar 13, 2026"/>
   </head>
   
   
@@ -177,7 +177,10 @@
         <p aria-level="2" class="caption" role="heading"><span class="caption-text">User Guide</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../../../source/installation.html">Installation Guide</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../source/tutorials.html">Tutorials</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../source/tutorials.html">Tutorials</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/tutorials/cartpole.html">Cartpole: Building Your First Environment</a></li>
+</ul>
+</details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../source/contributing.html">Contributing</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Concepts</span></p>
@@ -211,7 +214,10 @@
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Training &amp; Debugging</span></p>
 <ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../../../source/training/rsl_rl.html">Training with RSL-RL</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../../source/training/rsl_rl.html">Training with RSL-RL</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/training/motion_imitation.html">Motion Imitation</a></li>
+</ul>
+</details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../source/viewers.html">Viewers</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../source/training/distributed_training.html">Distributed Training</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../source/training/cloud.html">Cloud Training</a></li>
@@ -1041,12 +1047,11 @@ document.write(`
       <span class="p">)[</span><span class="kc">None</span><span class="p">]</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
       <span class="c1"># Joint limits.</span>
-      <span class="n">joint_ids_global</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
-        <span class="p">[</span><span class="n">j</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_non_free_joints</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span>
-      <span class="p">)</span>
-      <span class="n">dof_limits</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">jnt_range</span><span class="p">[:,</span> <span class="n">joint_ids_global</span><span class="p">]</span>
+      <span class="n">joint_ids_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">j</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_non_free_joints</span><span class="p">]</span>
+      <span class="n">dof_limits</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">jnt_range</span><span class="p">[:,</span> <span class="n">joint_ids_list</span><span class="p">]</span>
       <span class="n">default_joint_pos_limits</span> <span class="o">=</span> <span class="n">dof_limits</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
       <span class="n">joint_pos_limits</span> <span class="o">=</span> <span class="n">default_joint_pos_limits</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+
       <span class="n">joint_pos_mean</span> <span class="o">=</span> <span class="p">(</span><span class="n">joint_pos_limits</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">joint_pos_limits</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span>
       <span class="n">joint_pos_range</span> <span class="o">=</span> <span class="n">joint_pos_limits</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">joint_pos_limits</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
 
@@ -1063,6 +1068,17 @@ document.write(`
         <span class="p">],</span>
         <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
       <span class="p">)</span>
+
+      <span class="c1"># Unlimited joints have jnt_range=[0,0] in MuJoCo, which makes all</span>
+      <span class="c1"># the computed limits [0,0]. Override to [-inf, inf] so downstream</span>
+      <span class="c1"># clamping becomes a no-op. (Can&#39;t do this before soft-limit math</span>
+      <span class="c1"># because inf - inf = NaN.)</span>
+      <span class="n">unlimited</span> <span class="o">=</span> <span class="o">~</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+        <span class="n">mj_model</span><span class="o">.</span><span class="n">jnt_limited</span><span class="p">[</span><span class="n">joint_ids_list</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span>
+      <span class="p">)</span>
+      <span class="k">for</span> <span class="n">limits</span> <span class="ow">in</span> <span class="p">(</span><span class="n">joint_pos_limits</span><span class="p">,</span> <span class="n">default_joint_pos_limits</span><span class="p">,</span> <span class="n">soft_joint_pos_limits</span><span class="p">):</span>
+        <span class="n">limits</span><span class="p">[:,</span> <span class="n">unlimited</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;-inf&quot;</span><span class="p">)</span>
+        <span class="n">limits</span><span class="p">[:,</span> <span class="n">unlimited</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
       <span class="n">empty_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
       <span class="n">default_joint_pos</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="o">*</span><span class="n">empty_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
@@ -1697,7 +1713,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on Mar 09, 2026.
+  Last updated on Mar 13, 2026.
   <br/>
 </p>
   </div>

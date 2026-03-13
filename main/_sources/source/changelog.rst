@@ -8,23 +8,66 @@ Upcoming version (not yet released)
 Added
 ^^^^^
 
+- Added cartpole balance and swingup tasks (``Mjlab-Cartpole-Balance`` and
+  ``Mjlab-Cartpole-Swingup``) with a :ref:`tutorial <tutorial-cartpole>`
+  that walks through building an environment from scratch.
+- Added :ref:`motion imitation <motion-imitation>` documentation with
+  preprocessing instructions. The README now links here instead of the
+  BeyondMimic repository, which produced incompatible NPZ files when used
+  with mjlab (:issue:`777`).
+- Added ``margin``, ``gap``, and ``solmix`` fields to ``CollisionCfg``
+  for per geom contact parameter configuration (:issue:`766`).
 - Added ``DelayedBuiltinActuatorGroup`` that fuses delayed builtin actuators
   sharing the same delay configuration into a single buffer operation.
 - NaN guard now captures mocap body poses (``mocap_pos``, ``mocap_quat``)
   when the model has mocap bodies, enabling full state reconstruction in
   the dump viewer for fixed-base entities.
+- Implemented ``ActionTermCfg.clip`` for clamping processed actions after
+  scale and offset (:issue:`771`).
+- Added ``qfrc_actuator`` and ``qfrc_external`` generalized force accessors
+  to ``EntityData``. ``qfrc_actuator`` gives actuator forces in joint space
+  (projected through the transmission). ``qfrc_external`` recovers the
+  generalized force from body external wrenches (``xfrc_applied``)
+  (:issue:`776`).
 
 Changed
 ^^^^^^^
 
+- ``BoxSteppingStonesTerrainCfg`` stone size now decreases with difficulty,
+  interpolating from the large end of ``stone_size_range`` at difficulty 0
+  to the small end at difficulty 1 (:issue:`785`).
+- Removed deprecated ``TerrainImporter`` and ``TerrainImporterCfg`` aliases.
+  Use ``TerrainEntity`` and ``TerrainEntityCfg`` instead (:issue:`667`).
 - ``Entity.clear_state()`` is deprecated. Use ``Entity.reset()`` instead.
   ``clear_state`` only zeroed actuator targets without resetting actuator
   internal state (e.g. delay buffers), which could cause stale commands
   after teleporting the robot to a new pose.
+- Removed ``EntityData.generalized_force``. The property was bugged (indexed
+  free joint DOFs instead of articulated DOFs) and the name was ambiguous.
+  Use ``qfrc_actuator`` or ``qfrc_external`` instead (:issue:`776`).
 
 Fixed
 ^^^^^
 
+- ``electrical_power_cost`` now uses ``qfrc_actuator`` (joint space) instead
+  of ``actuator_force`` (actuation space) for mechanical power computation.
+  Previously the reward was incorrect for actuators with gear ratios other
+  than 1 (:issue:`776`).
+- ``create_velocity_actuator`` no longer sets ``ctrllimited=True`` with
+  ``inheritrange=1.0``. This caused a ``ValueError`` for continuous joints
+  (e.g. wheels) that have no position range defined (:issue:`787`).
+- Joint limits for unlimited joints are now set to [-inf, inf] instead of
+  [0, 0]. Previously the zero range caused incorrect clamping for entities
+  with unlimited hinge or slide joints.
+- Contact force visualization now copies ``ctrl`` into the CPU ``MjData``
+  before calling ``mj_forward``. Actuators that compute torques in Python
+  (``DcMotorActuator``, ``IdealPdActuator``) previously showed incorrect
+  contact forces because the viewer ran with ``ctrl=0``
+  (:issue:`786`).
+- ``BoxSteppingStonesTerrainCfg`` no longer creates a large gap around the
+  platform. Stones are now only skipped when their center falls inside the
+  platform; edges that extend under the platform are allowed since the
+  platform covers them (:issue:`785`).
 - ``dr.pseudo_inertia`` no longer loads cuSOLVER, eliminating ~4 GB of
   persistent GPU memory overhead. Cholesky and eigendecomposition are now
   computed analytically for the small matrices involved (4x4 and 3x3)
@@ -32,6 +75,18 @@ Fixed
 - Set terrain geom mass to zero so that the static terrain body does not
   inflate ``stat.meanmass``, which made force arrow visualization invisible
   on rough terrain (:issue:`734`, :issue:`537`).
+- Native viewer now syncs ``qpos0`` when domain randomized, fixing incorrect
+  body positions after ``dr.joint_default_pos`` randomization
+  (:issue:`760`).
+- ``command_manager.compute()`` is now called during ``reset()`` so that
+  derived command state (e.g. relative body positions in tracking
+  environments) is populated before the first observation is returned
+  (:issue:`761`).
+- ``RayCastSensor`` with ``ray_alignment="yaw"`` or ``"world"`` now correctly
+  aligns the frame offset when attached to a site or geom with a local offset
+  from its parent body. Previously only ray directions and pattern offsets were
+  aligned, causing the frame position to swing with body pitch/roll
+  (:issue:`775`).
 
 Version 1.2.0 (March 6, 2026)
 -----------------------------
