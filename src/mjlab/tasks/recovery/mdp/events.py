@@ -240,12 +240,10 @@ class RecoveryReset(ManagerTermBase):
     default_joint_pos = asset.data.default_joint_pos
     default_joint_vel = asset.data.default_joint_vel
     soft_joint_pos_limits = asset.data.soft_joint_pos_limits
-    soft_joint_vel_limits = asset.data.soft_joint_vel_limits
     assert default_root_state is not None
     assert default_joint_pos is not None
     assert default_joint_vel is not None
     assert soft_joint_pos_limits is not None
-    assert soft_joint_vel_limits is not None
 
     root_pose = default_root_state[env_ids, :7].clone()
     root_pose[:, 0:2] = env.scene.env_origins[env_ids, 0:2]
@@ -306,8 +304,6 @@ class RecoveryReset(ManagerTermBase):
       joint_vel.shape,
       env.device,
     )
-    joint_vel_limits = soft_joint_vel_limits[env_ids][:, joint_ids]
-    joint_vel = joint_vel.clamp(min=-joint_vel_limits, max=joint_vel_limits)
 
     return root_pose, root_vel, joint_pos, joint_vel
 
