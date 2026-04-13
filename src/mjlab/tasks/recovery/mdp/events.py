@@ -180,8 +180,11 @@ class RecoveryReset(ManagerTermBase):
       env_ids = torch.arange(env.num_envs, device=env.device, dtype=torch.int)
 
     asset: Entity = env.scene[asset_cfg.name]
-    teacher_cfg = getattr(env.cfg, "teacher", None)
-    teacher_probability = float(max(0.0, min(1.0, self.reference_probability)))
+    teacher_probability = (
+      float(max(0.0, min(1.0, self.reference_probability)))
+      if self._motion_loader is not None
+      else 0.0
+    )
 
     random_fall_probability = float(max(0.0, min(1.0, random_fall_probability)))
     fallen_pose_probability = float(max(0.0, min(1.0, fallen_pose_probability)))

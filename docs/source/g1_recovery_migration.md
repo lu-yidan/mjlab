@@ -187,6 +187,104 @@ The following checks were completed:
   so reset states can be inspected over the first few physics steps instead of
   only as a static pose
 
+## Experiment Record
+
+The following recovery runs are the main reference points so far.
+
+### 1. Old reset + aggressive PPO
+
+Run:
+
+- `/home/ydlu/workspace/mjlab/logs/rsl_rl/g1_recovery/2026-04-10_21-29-51`
+
+Observed behavior:
+
+- many environments appeared to "bounce" or catch an unstable reset
+- policies could sometimes stabilize near-standing states
+- once genuinely dragged down, recovery was poor
+- higher checkpoints often looked more jittery than mid-run checkpoints
+
+End-of-run summary:
+
+- `Train/mean_reward`: `23.24`
+- `Train/mean_episode_length`: `144.84`
+- `Policy/mean_std`: `2.10`
+- `Episode_Reward/stand_bonus`: `0.46`
+- `Episode_Termination/joint_vel_limit`: `21.13`
+
+Interpretation:
+
+- reset improvements were still incomplete
+- PPO became too aggressive and learned high-variance solutions
+
+### 2. New reset + still-aggressive PPO
+
+Run:
+
+- `/home/ydlu/workspace/mjlab/logs/rsl_rl/g1_recovery/2026-04-11_10-46-43`
+
+Observed behavior:
+
+- reset artifacts were reduced
+- standing-related rewards rose substantially
+- but later checkpoints still drifted toward high-variance, unstable behavior
+
+End-of-run summary:
+
+- `Train/mean_reward`: `32.03`
+- `Train/mean_episode_length`: `213.37`
+- `Policy/mean_std`: `2.10`
+- `Episode_Reward/stand_bonus`: `0.65`
+- `Episode_Termination/joint_vel_limit`: `16.33`
+
+Interpretation:
+
+- reset direction was better
+- optimizer / exploration remained too aggressive
+
+### 3. New reset + conservative PPO
+
+Run:
+
+- `/home/ydlu/workspace/mjlab/logs/rsl_rl/g1_recovery/2026-04-11_19-29-55`
+
+Observed behavior:
+
+- substantially healthier learning dynamics
+- policy variance stayed controlled
+- recovery rewards and stand bonus grew strongly
+- joint-velocity-limit termination stayed near zero
+
+End-of-run summary:
+
+- `Train/mean_reward`: `92.60`
+- `Train/mean_episode_length`: `359.63`
+- `Policy/mean_std`: `0.70`
+- `Episode_Reward/stand_bonus`: `1.10`
+- `Episode_Termination/joint_vel_limit`: `0.13`
+
+Interpretation:
+
+- this is the current best non-assisted recovery baseline
+- unlike the earlier runs, it does not obviously drift into "high-std shaking"
+
+### Current best checkpoint candidates
+
+For the conservative run, the most useful checkpoints to inspect are:
+
+- `model_3000.pt`
+- `model_5000.pt`
+- `model_5999.pt`
+
+Recommended first checkpoint to inspect:
+
+- `model_5000.pt`
+
+Reason:
+
+- it sits near the strongest reward / episode-length region
+- policy variance remains much better controlled than in the older runs
+
 ## Pitfalls And Fixes
 
 These were real issues hit during migration and playback. They are documented
@@ -349,7 +447,7 @@ uv run python -m mjlab.scripts.preview_recovery_fallen_poses \
 cd /home/ydlu/workspace/mjlab
 
 uv run play Mjlab-Recovery-Flat-Unitree-G1 \
-  --checkpoint-file "/home/ydlu/workspace/mjlab/logs/rsl_rl/g1_recovery/2026-04-10_21-29-51/model_1600.pt" \
+  --checkpoint-file "/home/ydlu/workspace/mjlab/logs/rsl_rl/g1_recovery/2026-04-11_19-29-55/model_5000.pt" \
   --num-envs 1 \
   --viewer native \
   --no-terminations True \
