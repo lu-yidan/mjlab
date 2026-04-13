@@ -132,6 +132,7 @@ The current recovery reset strategy is a mixture of:
 - teacher motion reset states
 - stable fallen poses for evaluation/fallback
 - only a tiny or zero random-fall component by default
+- a short post-reset settle phase before the episode meaningfully begins
 
 ### Training reset
 
@@ -143,6 +144,9 @@ When `teacher.motion_path` is provided:
   progress window near the lying/fallen portion of the clip
 - those fallen states are zero-velocity by default to avoid immediately
   exploding contacts
+- after reset, the environment runs a short settle phase with the robot holding
+  its current joint configuration, so contact impulses can dissipate before the
+  policy starts exploiting them
 
 This keeps training physically grounded while still exposing the policy to
 realistic recovery starts.
@@ -155,6 +159,8 @@ For `play=True`:
 - push events are disabled
 - teacher resets are disabled by default
 - reset uses a small library of canonical, physically plausible fallen poses
+- the play config uses a longer post-reset settle than training to make visual
+  inspection easier
 
 This is intentionally different from training because it makes checkpoint
 inspection easier and less noisy.

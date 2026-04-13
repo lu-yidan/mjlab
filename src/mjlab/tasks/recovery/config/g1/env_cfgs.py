@@ -164,5 +164,6 @@ def unitree_g1_flat_recovery_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg
     cfg.events["recovery_reset"].params["fallen_pose_xy_jitter"] = 0.0
     cfg.events["recovery_reset"].params["fallen_pose_yaw_jitter"] = 0.0
     cfg.events["recovery_reset"].params["fallen_pose_joint_jitter"] = 0.0
+    cfg.events["recovery_reset"].params["post_reset_settle_steps"] = 12
 
   return cfg

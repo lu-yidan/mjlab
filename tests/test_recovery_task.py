@@ -95,6 +95,9 @@ def test_recovery_play_mode_disables_teacher_and_push(
         assert reset_params["fallen_pose_joint_jitter"] == 0.0, (
             f"Task {task_id} (play mode) should disable joint jitter for reset"
         )
+        assert reset_params["post_reset_settle_steps"] == 12, (
+            f"Task {task_id} (play mode) should use longer settle after reset"
+        )
 
 
 def test_recovery_actor_observations_are_motion_free(

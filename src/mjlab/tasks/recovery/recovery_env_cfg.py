@@ -137,6 +137,7 @@ def make_recovery_env_cfg() -> RecoveryEnvCfg:
         "fallen_pose_xy_jitter": 0.01,
         "fallen_pose_yaw_jitter": 0.1,
         "fallen_pose_joint_jitter": 0.03,
+        "post_reset_settle_steps": 6,
         "root_velocity_range": {
           "x": (-0.2, 0.2),
           "y": (-0.2, 0.2),

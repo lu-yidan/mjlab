@@ -174,12 +174,14 @@ class RecoveryReset(ManagerTermBase):
     fallen_pose_xy_jitter: float = 0.01,
     fallen_pose_yaw_jitter: float = 0.1,
     fallen_pose_joint_jitter: float = 0.03,
+    post_reset_settle_steps: int = 0,
     root_velocity_range: dict[str, tuple[float, float]] | None = None,
   ) -> None:
     if env_ids is None:
       env_ids = torch.arange(env.num_envs, device=env.device, dtype=torch.int)
 
     asset: Entity = env.scene[asset_cfg.name]
+    teacher_cfg = getattr(env.cfg, "teacher", None)
     teacher_probability = (
       float(max(0.0, min(1.0, self.reference_probability)))
       if self._motion_loader is not None
@@ -299,6 +301,15 @@ class RecoveryReset(ManagerTermBase):
       env_ids=env_ids,
       joint_ids=joint_ids,
     )
+
+    if post_reset_settle_steps > 0:
+      self._run_post_reset_settle(
+        env=env,
+        env_ids=env_ids,
+        asset=asset,
+        joint_ids=joint_ids,
+        settle_steps=post_reset_settle_steps,
+      )
 
   def _sample_fallen_pose_state(
     self,
@@ -573,6 +584,37 @@ class RecoveryReset(ManagerTermBase):
     )
 
     return root_pose, root_vel, joint_pos, joint_vel
+
+  def _run_post_reset_settle(
+    self,
+    env: ManagerBasedRlEnv,
+    env_ids: torch.Tensor,
+    asset: Entity,
+    joint_ids: torch.Tensor,
+    settle_steps: int,
+  ) -> None:
+    """Let reset contacts settle before the episode begins.
+
+    The robot keeps its current joint configuration as the target while the
+    physics is stepped a few substeps. This avoids immediately injecting a
+    policy action or a stand-seeking target into unstable contacts.
+    """
+    if settle_steps <= 0:
+      return
+
+    joint_ids_slice = joint_ids
+    zero_joint = torch.zeros(
+      (len(env_ids), len(joint_ids_slice)), device=env.device, dtype=torch.float32
+    )
+    env_index = env_ids[:, None]
+    for _ in range(settle_steps):
+      current_joint_pos = asset.data.joint_pos[env_ids][:, joint_ids_slice].clone()
+      asset.data.joint_pos_target[env_index, joint_ids_slice] = current_joint_pos
+      asset.data.joint_vel_target[env_index, joint_ids_slice] = zero_joint
+      asset.data.joint_effort_target[env_index, joint_ids_slice] = zero_joint
+      env.scene.write_data_to_sim()
+      env.sim.step()
+      env.scene.update(dt=env.physics_dt)
 
   @staticmethod
   def _sample_fall_orientation(
