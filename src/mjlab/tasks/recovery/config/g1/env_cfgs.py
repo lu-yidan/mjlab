@@ -151,12 +151,14 @@ def unitree_g1_flat_recovery_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg
     cfg.sim.njmax = 600
     cfg.observations["actor"].enable_corruption = False
     cfg.events.pop("push_robot", None)
+    cfg.events.pop("upward_assist", None)
     cfg.events.pop("foot_friction", None)
     cfg.events.pop("encoder_bias", None)
     cfg.events.pop("base_com", None)
     cfg.curriculum = {}
     cfg.teacher.motion_path = ""
     cfg.teacher.reference_probability = 0.0
+    joint_pos_action.unactuated_steps = 10
     cfg.events["recovery_reset"].params["fallen_pose_probability"] = 1.0
     cfg.events["recovery_reset"].params["random_fall_probability"] = 0.0
     cfg.events["recovery_reset"].params["motion_fallen_zero_velocity"] = True
@@ -164,6 +166,8 @@ def unitree_g1_flat_recovery_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg
     cfg.events["recovery_reset"].params["fallen_pose_xy_jitter"] = 0.0
     cfg.events["recovery_reset"].params["fallen_pose_yaw_jitter"] = 0.0
     cfg.events["recovery_reset"].params["fallen_pose_joint_jitter"] = 0.0
-    cfg.events["recovery_reset"].params["post_reset_settle_steps"] = 12
+    cfg.events["recovery_reset"].params["teacher_post_reset_settle_steps"] = 0
+    cfg.events["recovery_reset"].params["fallen_post_reset_settle_steps"] = 12
+    cfg.events["recovery_reset"].params["random_post_reset_settle_steps"] = 12
 
   return cfg

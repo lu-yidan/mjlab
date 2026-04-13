@@ -70,6 +70,9 @@ def test_recovery_play_mode_disables_teacher_and_push(
         assert "push_robot" not in cfg.events, (
             f"Task {task_id} (play mode) still has push_robot enabled"
         )
+        assert "upward_assist" not in cfg.events, (
+            f"Task {task_id} (play mode) still has upward_assist enabled"
+        )
         assert cfg.teacher.motion_path == "", (
             f"Task {task_id} (play mode) kept teacher motion_path="
             f"{cfg.teacher.motion_path}"
@@ -95,8 +98,14 @@ def test_recovery_play_mode_disables_teacher_and_push(
         assert reset_params["fallen_pose_joint_jitter"] == 0.0, (
             f"Task {task_id} (play mode) should disable joint jitter for reset"
         )
-        assert reset_params["post_reset_settle_steps"] == 12, (
-            f"Task {task_id} (play mode) should use longer settle after reset"
+        assert reset_params["teacher_post_reset_settle_steps"] == 0, (
+            f"Task {task_id} (play mode) should not settle teacher resets"
+        )
+        assert reset_params["fallen_post_reset_settle_steps"] == 12, (
+            f"Task {task_id} (play mode) should use longer settle for fallen resets"
+        )
+        assert reset_params["random_post_reset_settle_steps"] == 12, (
+            f"Task {task_id} (play mode) should use longer settle for random fallback resets"
         )
 
 

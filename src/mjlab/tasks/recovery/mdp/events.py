@@ -20,6 +20,67 @@ if TYPE_CHECKING:
 _DEFAULT_ASSET_CFG = SceneEntityCfg("robot")
 
 
+class UpwardAssistance(ManagerTermBase):
+  """Apply a small upward wrench early in recovery episodes.
+
+  This is a minimal HoST-style assistance mechanism: a torso-directed upward
+  force is applied while the robot is low and not yet upright, and the force is
+  gradually reduced by a curriculum based on successful standing.
+  """
+
+  def __init__(self, cfg: EventTermCfg, env: "ManagerBasedRlEnv"):
+    super().__init__(env)
+    self._cfg = cfg
+    self.force = torch.full(
+      (env.num_envs,),
+      float(cfg.params["force"]),
+      dtype=torch.float32,
+      device=env.device,
+    )
+
+  def __call__(
+    self,
+    env: "ManagerBasedRlEnv",
+    env_ids: torch.Tensor | None,
+    asset_cfg: SceneEntityCfg = _DEFAULT_ASSET_CFG,
+    force: float = 0.0,
+    assist_start_steps: int = 0,
+    assist_until_height: float = 0.55,
+    orientation_z_threshold: float = -0.7,
+    use_orientation_gate: bool = True,
+  ) -> None:
+    del force  # Use the mutable per-env force buffer instead.
+    del env_ids  # Step mode always operates on all environments.
+
+    asset: Entity = env.scene[asset_cfg.name]
+    body_ids = asset_cfg.body_ids
+    if isinstance(body_ids, slice):
+      raise ValueError("UpwardAssistance requires explicit body_ids/body_names.")
+    if isinstance(body_ids, list):
+      body_ids_tensor = torch.tensor(body_ids, device=env.device, dtype=torch.long)
+    else:
+      body_ids_tensor = body_ids.to(device=env.device, dtype=torch.long)
+
+    num_bodies = int(len(body_ids_tensor))
+    forces = torch.zeros((env.num_envs, num_bodies, 3), device=env.device)
+    torques = torch.zeros_like(forces)
+
+    root_height = asset.data.root_link_pos_w[:, 2] - env.scene.env_origins[:, 2]
+    after_warmup = env.episode_length_buf >= assist_start_steps
+    active = after_warmup & (root_height < assist_until_height)
+    if use_orientation_gate:
+      not_upright = asset.data.projected_gravity_b[:, 2] > orientation_z_threshold
+      active &= not_upright
+    if torch.any(active):
+      forces[active, 0, 2] = self.force[active]
+
+    asset.write_external_wrench_to_sim(
+      forces,
+      torques,
+      body_ids=body_ids_tensor.tolist(),
+    )
+
+
 class _RecoveryMotionClip:
   def __init__(self, path: Path, device: str):
     with np.load(path, allow_pickle=False) as data:
@@ -174,7 +235,9 @@ class RecoveryReset(ManagerTermBase):
     fallen_pose_xy_jitter: float = 0.01,
     fallen_pose_yaw_jitter: float = 0.1,
     fallen_pose_joint_jitter: float = 0.03,
-    post_reset_settle_steps: int = 0,
+    teacher_post_reset_settle_steps: int = 0,
+    fallen_post_reset_settle_steps: int = 0,
+    random_post_reset_settle_steps: int = 0,
     root_velocity_range: dict[str, tuple[float, float]] | None = None,
   ) -> None:
     if env_ids is None:
@@ -219,7 +282,10 @@ class RecoveryReset(ManagerTermBase):
         < fallen_conditional_probability
       )
     uncovered_mask = ~(teacher_mask | random_mask | fallen_mask)
-    random_mask |= uncovered_mask
+    if random_fall_probability > 0.0:
+      random_mask |= uncovered_mask
+    else:
+      fallen_mask |= uncovered_mask
 
     root_pose = asset.data.default_root_state[env_ids, :7].clone()
     root_vel = torch.zeros((len(env_ids), 6), device=env.device)
@@ -302,13 +368,29 @@ class RecoveryReset(ManagerTermBase):
       joint_ids=joint_ids,
     )
 
-    if post_reset_settle_steps > 0:
+    if torch.any(fallen_mask) and fallen_post_reset_settle_steps > 0:
       self._run_post_reset_settle(
         env=env,
-        env_ids=env_ids,
+        env_ids=env_ids[fallen_mask],
         asset=asset,
         joint_ids=joint_ids,
-        settle_steps=post_reset_settle_steps,
+        settle_steps=fallen_post_reset_settle_steps,
+      )
+    if torch.any(random_mask) and random_post_reset_settle_steps > 0:
+      self._run_post_reset_settle(
+        env=env,
+        env_ids=env_ids[random_mask],
+        asset=asset,
+        joint_ids=joint_ids,
+        settle_steps=random_post_reset_settle_steps,
+      )
+    if torch.any(teacher_mask) and teacher_post_reset_settle_steps > 0:
+      self._run_post_reset_settle(
+        env=env,
+        env_ids=env_ids[teacher_mask],
+        asset=asset,
+        joint_ids=joint_ids,
+        settle_steps=teacher_post_reset_settle_steps,
       )
 
   def _sample_fallen_pose_state(

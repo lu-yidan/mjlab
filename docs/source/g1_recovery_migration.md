@@ -144,9 +144,12 @@ When `teacher.motion_path` is provided:
   progress window near the lying/fallen portion of the clip
 - those fallen states are zero-velocity by default to avoid immediately
   exploding contacts
-- after reset, the environment runs a short settle phase with the robot holding
-  its current joint configuration, so contact impulses can dissipate before the
-  policy starts exploiting them
+- `fallen` and fallback random resets use a short settle phase with the robot
+  holding its current joint configuration, so contact impulses can dissipate
+  before the policy starts exploiting them
+- `teacher` resets can use a different settle policy than `fallen` resets,
+  allowing motion-derived mid-recovery states to preserve more of their intended
+  dynamics
 
 This keeps training physically grounded while still exposing the policy to
 realistic recovery starts.
@@ -159,8 +162,8 @@ For `play=True`:
 - push events are disabled
 - teacher resets are disabled by default
 - reset uses a small library of canonical, physically plausible fallen poses
-- the play config uses a longer post-reset settle than training to make visual
-  inspection easier
+- the play config uses a longer settle for fallen/reset fallback states so
+  checkpoint inspection is less dominated by immediate contact transients
 
 This is intentionally different from training because it makes checkpoint
 inspection easier and less noisy.
@@ -459,6 +462,22 @@ uv run play Mjlab-Recovery-Flat-Unitree-G1 \
   --no-terminations True \
   --teacher-motion-path "/home/ydlu/workspace/mjlab/artifacts/recovery_motions/g1_amp_get_up"
 ```
+
+## Termination Notes
+
+The current recovery task uses:
+
+- `time_out`
+- `root_height_floor`
+- `nan_detection`
+- `joint_vel_limit`
+
+Important detail:
+
+- `root_height_floor` no longer fires immediately from the first post-reset
+  control step
+- it now has a short grace window so truly fallen states can redistribute
+  contacts and begin recovery before being declared failed for being too low
 
 ## Recommended Next Step
 

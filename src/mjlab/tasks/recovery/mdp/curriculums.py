@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 import torch
 
-from .events import RecoveryReset
+from .events import RecoveryReset, UpwardAssistance
 
 if TYPE_CHECKING:
   from mjlab.envs import ManagerBasedRlEnv
@@ -18,6 +18,38 @@ class ProbabilityStage(TypedDict):
 class PushVelocityStage(TypedDict):
   step: int
   velocity_range: dict[str, tuple[float, float]]
+
+
+def upward_assistance_force(
+  env: ManagerBasedRlEnv,
+  env_ids: torch.Tensor | slice,
+  event_name: str,
+  success_height: float,
+  success_upright_threshold: float,
+  decrement: float,
+  min_force: float,
+) -> torch.Tensor:
+  """Reduce upward assistance for environments that end episodes successfully."""
+  if isinstance(env_ids, slice):
+    env_ids = torch.arange(env.num_envs, device=env.device)[env_ids]
+  event_cfg = env.event_manager.get_term_cfg(event_name)
+  event_term = event_cfg.func
+  if not isinstance(event_term, UpwardAssistance):
+    raise TypeError(
+      f"Event '{event_name}' must use UpwardAssistance, got "
+      f"{type(event_term).__name__}."
+    )
+
+  asset = env.scene["robot"]
+  root_height = asset.data.root_link_pos_w[env_ids, 2] - env.scene.env_origins[env_ids, 2]
+  uprightness = -asset.data.projected_gravity_b[env_ids, 2]
+  success = (root_height > success_height) & (uprightness > success_upright_threshold)
+  if torch.any(success):
+    success_ids = env_ids[success]
+    event_term.force[success_ids] = (
+      event_term.force[success_ids] - decrement
+    ).clamp(min=min_force)
+  return torch.mean(event_term.force)
 
 
 def reference_reset_probability(

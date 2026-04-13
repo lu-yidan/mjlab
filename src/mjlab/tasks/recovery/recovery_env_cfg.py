@@ -12,7 +12,6 @@ from dataclasses import dataclass, field
 from mjlab.envs import ManagerBasedRlEnvCfg
 from mjlab.envs import mdp as envs_mdp
 from mjlab.envs.mdp import dr
-from mjlab.envs.mdp.actions import JointPositionActionCfg
 from mjlab.managers.action_manager import ActionTermCfg
 from mjlab.managers.curriculum_manager import CurriculumTermCfg
 from mjlab.managers.event_manager import EventTermCfg
@@ -34,9 +33,9 @@ class RecoveryTeacherCfg:
 
   motion_path: str = ""
   motion_weights: dict[str, float] = field(default_factory=dict)
-  reference_probability: float = 0.5
+  reference_probability: float = 0.7
   min_progress: float = 0.08
-  max_progress: float = 0.45
+  max_progress: float = 0.6
   height_offset: float = 0.05
 
 
@@ -111,11 +110,12 @@ def make_recovery_env_cfg() -> RecoveryEnvCfg:
   }
 
   actions: dict[str, ActionTermCfg] = {
-    "joint_pos": JointPositionActionCfg(
+    "joint_pos": mdp.RecoveryJointPositionActionCfg(
       entity_name="robot",
       actuator_names=(".*",),
       scale=0.5,
       use_default_offset=True,
+      unactuated_steps=30,
     )
   }
 
@@ -137,7 +137,9 @@ def make_recovery_env_cfg() -> RecoveryEnvCfg:
         "fallen_pose_xy_jitter": 0.01,
         "fallen_pose_yaw_jitter": 0.1,
         "fallen_pose_joint_jitter": 0.03,
-        "post_reset_settle_steps": 6,
+        "teacher_post_reset_settle_steps": 0,
+        "fallen_post_reset_settle_steps": 8,
+        "random_post_reset_settle_steps": 8,
         "root_velocity_range": {
           "x": (-0.2, 0.2),
           "y": (-0.2, 0.2),
@@ -146,6 +148,18 @@ def make_recovery_env_cfg() -> RecoveryEnvCfg:
           "pitch": (-0.5, 0.5),
           "yaw": (-0.5, 0.5),
         },
+      },
+    ),
+    "upward_assist": EventTermCfg(
+      func=mdp.UpwardAssistance,
+      mode="step",
+      params={
+        "asset_cfg": SceneEntityCfg("robot", body_names=("torso_link",)),
+        "force": 200.0,
+        "assist_start_steps": 30,
+        "assist_until_height": 0.7,
+        "orientation_z_threshold": -0.7,
+        "use_orientation_gate": False,
       },
     ),
     "push_robot": EventTermCfg(
@@ -262,8 +276,8 @@ def make_recovery_env_cfg() -> RecoveryEnvCfg:
   terminations = {
     "time_out": TerminationTermCfg(func=envs_mdp.time_out, time_out=True),
     "root_height_floor": TerminationTermCfg(
-      func=envs_mdp.root_height_below_minimum,
-      params={"minimum_height": 0.08},
+      func=mdp.root_height_below_minimum_after_grace,
+      params={"minimum_height": 0.08, "min_steps_before_check": 40},
     ),
     "nan_detection": TerminationTermCfg(func=envs_mdp.nan_detection),
     "joint_vel_limit": TerminationTermCfg(
@@ -278,10 +292,20 @@ def make_recovery_env_cfg() -> RecoveryEnvCfg:
       params={
         "event_name": "recovery_reset",
         "stages": [
-          {"step": 0, "probability": 0.5},
-          {"step": 5_000 * 24, "probability": 0.3},
+          {"step": 0, "probability": 0.7},
+          {"step": 5_000 * 24, "probability": 0.5},
           {"step": 15_000 * 24, "probability": 0.15},
         ],
+      },
+    ),
+    "upward_assistance_force": CurriculumTermCfg(
+      func=mdp.upward_assistance_force,
+      params={
+        "event_name": "upward_assist",
+        "success_height": 0.9,
+        "success_upright_threshold": 0.9,
+        "decrement": 20.0,
+        "min_force": 0.0,
       },
     ),
     "push_velocity": CurriculumTermCfg(
