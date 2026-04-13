@@ -28,6 +28,8 @@ class PlayConfig:
   """Optional checkpoint name within the W&B run to load (e.g. 'model_4000.pt')."""
   checkpoint_file: str | None = None
   motion_file: str | None = None
+  teacher_motion_path: str | None = None
+  """Optional path to converted recovery motions used for fallen-state resets."""
   num_envs: int | None = None
   device: str | None = None
   video: bool = False
@@ -50,6 +52,9 @@ def run_play(task_id: str, cfg: PlayConfig):
 
   env_cfg = load_env_cfg(task_id, play=True)
   agent_cfg = load_rl_cfg(task_id)
+
+  if cfg.teacher_motion_path is not None and hasattr(env_cfg, "teacher"):
+    env_cfg.teacher.motion_path = cfg.teacher_motion_path
 
   DUMMY_MODE = cfg.agent in {"zero", "random"}
   TRAINED_MODE = not DUMMY_MODE

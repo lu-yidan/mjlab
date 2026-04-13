@@ -78,6 +78,23 @@ def test_recovery_play_mode_disables_teacher_and_push(
             f"Task {task_id} (play mode) kept teacher probability "
             f"{cfg.teacher.reference_probability}"
         )
+        for startup_event in ["foot_friction", "encoder_bias", "base_com"]:
+            assert startup_event not in cfg.events, (
+                f"Task {task_id} (play mode) still has {startup_event} enabled"
+            )
+        reset_params = cfg.events["recovery_reset"].params
+        assert reset_params["fallen_pose_probability"] == 1.0, (
+            f"Task {task_id} (play mode) should use only fallen poses for reset"
+        )
+        assert reset_params["random_fall_probability"] == 0.0, (
+            f"Task {task_id} (play mode) should disable random air-drop reset"
+        )
+        assert reset_params["fallen_pose_yaw_jitter"] == 0.0, (
+            f"Task {task_id} (play mode) should disable yaw jitter for reset"
+        )
+        assert reset_params["fallen_pose_joint_jitter"] == 0.0, (
+            f"Task {task_id} (play mode) should disable joint jitter for reset"
+        )
 
 
 def test_recovery_actor_observations_are_motion_free(

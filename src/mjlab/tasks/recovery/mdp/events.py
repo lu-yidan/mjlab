@@ -11,7 +11,8 @@ from mjlab.entity import Entity
 from mjlab.managers.event_manager import EventTermCfg
 from mjlab.managers.manager_base import ManagerTermBase
 from mjlab.managers.scene_entity_config import SceneEntityCfg
-from mjlab.utils.lab_api.math import quat_from_euler_xyz, sample_uniform
+from mjlab.utils.lab_api.math import quat_from_euler_xyz, quat_mul, sample_uniform
+from mjlab.utils.string import resolve_expr
 
 if TYPE_CHECKING:
   from mjlab.envs import ManagerBasedRlEnv
@@ -164,50 +165,122 @@ class RecoveryReset(ManagerTermBase):
     base_height_range: tuple[float, float] = (0.18, 0.38),
     joint_position_range: tuple[float, float] = (-0.45, 0.45),
     joint_velocity_range: tuple[float, float] = (-1.0, 1.0),
+    fallen_pose_library=(),
+    fallen_pose_probability: float = 0.4,
+    random_fall_probability: float = 0.0,
+    motion_fallen_progress_range: tuple[float, float] = (0.0, 0.12),
+    motion_fallen_zero_velocity: bool = True,
+    fallen_pose_height_offset: float = 0.02,
+    fallen_pose_xy_jitter: float = 0.01,
+    fallen_pose_yaw_jitter: float = 0.1,
+    fallen_pose_joint_jitter: float = 0.03,
     root_velocity_range: dict[str, tuple[float, float]] | None = None,
   ) -> None:
     if env_ids is None:
       env_ids = torch.arange(env.num_envs, device=env.device, dtype=torch.int)
 
     asset: Entity = env.scene[asset_cfg.name]
-    root_pose, root_vel, joint_pos, joint_vel = self._sample_random_fall_state(
-      env=env,
-      env_ids=env_ids,
-      asset=asset,
-      asset_cfg=asset_cfg,
-      base_height_range=base_height_range,
-      joint_position_range=joint_position_range,
-      joint_velocity_range=joint_velocity_range,
-      root_velocity_range=root_velocity_range or {},
-    )
-
     teacher_cfg = getattr(env.cfg, "teacher", None)
+    teacher_probability = float(max(0.0, min(1.0, self.reference_probability)))
+
+    random_fall_probability = float(max(0.0, min(1.0, random_fall_probability)))
+    fallen_pose_probability = float(max(0.0, min(1.0, fallen_pose_probability)))
+
+    teacher_mask = torch.rand(len(env_ids), device=env.device) < teacher_probability
+    remaining_mask = ~teacher_mask
+    random_mask = torch.zeros(len(env_ids), dtype=torch.bool, device=env.device)
+    if random_fall_probability > 0.0 and torch.any(remaining_mask):
+      remaining_ids = torch.where(remaining_mask)[0]
+      remaining_probability = max(1.0 - teacher_probability, 1e-6)
+      random_conditional_probability = min(
+        1.0, random_fall_probability / remaining_probability
+      )
+      random_mask[remaining_ids] = (
+        torch.rand(len(remaining_ids), device=env.device)
+        < random_conditional_probability
+      )
+    remaining_after_random_mask = ~(teacher_mask | random_mask)
+    fallen_mask = torch.zeros(len(env_ids), dtype=torch.bool, device=env.device)
+    if torch.any(remaining_after_random_mask):
+      remaining_ids = torch.where(remaining_after_random_mask)[0]
+      remaining_probability = max(
+        1.0 - teacher_probability - random_fall_probability, 1e-6
+      )
+      fallen_conditional_probability = min(
+        1.0, fallen_pose_probability / remaining_probability
+      )
+      fallen_mask[remaining_ids] = (
+        torch.rand(len(remaining_ids), device=env.device)
+        < fallen_conditional_probability
+      )
+    uncovered_mask = ~(teacher_mask | random_mask | fallen_mask)
+    random_mask |= uncovered_mask
+
+    root_pose = asset.data.default_root_state[env_ids, :7].clone()
+    root_vel = torch.zeros((len(env_ids), 6), device=env.device)
+    joint_pos = asset.data.default_joint_pos[env_ids][:, asset_cfg.joint_ids].clone()
+    joint_vel = torch.zeros_like(joint_pos)
+
+    if torch.any(fallen_mask):
+      fallen_ids = env_ids[fallen_mask]
+      pose_src = self._sample_fallen_pose_state(
+        env=env,
+        env_ids=fallen_ids,
+        asset=asset,
+        asset_cfg=asset_cfg,
+        fallen_pose_library=fallen_pose_library,
+        motion_fallen_progress_range=motion_fallen_progress_range,
+        motion_fallen_zero_velocity=motion_fallen_zero_velocity,
+        height_offset=fallen_pose_height_offset,
+        xy_jitter=fallen_pose_xy_jitter,
+        yaw_jitter=fallen_pose_yaw_jitter,
+        joint_jitter=fallen_pose_joint_jitter,
+      )
+      root_pose[fallen_mask] = pose_src["root_pose"]
+      root_vel[fallen_mask] = pose_src["root_vel"]
+      joint_pos[fallen_mask] = pose_src["joint_pos"]
+      joint_vel[fallen_mask] = pose_src["joint_vel"]
+
+    if torch.any(random_mask):
+      random_ids = env_ids[random_mask]
+      rand_pose, rand_vel, rand_joint_pos, rand_joint_vel = self._sample_random_fall_state(
+        env=env,
+        env_ids=random_ids,
+        asset=asset,
+        asset_cfg=asset_cfg,
+        base_height_range=base_height_range,
+        joint_position_range=joint_position_range,
+        joint_velocity_range=joint_velocity_range,
+        root_velocity_range=root_velocity_range or {},
+      )
+      root_pose[random_mask] = rand_pose
+      root_vel[random_mask] = rand_vel
+      joint_pos[random_mask] = rand_joint_pos
+      joint_vel[random_mask] = rand_joint_vel
+
     if (
       teacher_cfg is not None
       and self._motion_loader is not None
-      and self.reference_probability > 0.0
+      and teacher_probability > 0.0
+      and torch.any(teacher_mask)
     ):
-      use_reference = (
-        torch.rand(len(env_ids), device=env.device) < self.reference_probability
+      ref_ids = env_ids[teacher_mask]
+      sample = self._motion_loader.sample(
+        num_samples=len(ref_ids),
+        min_progress=teacher_cfg.min_progress,
+        max_progress=teacher_cfg.max_progress,
       )
-      if torch.any(use_reference):
-        ref_ids = env_ids[use_reference]
-        sample = self._motion_loader.sample(
-          num_samples=len(ref_ids),
-          min_progress=teacher_cfg.min_progress,
-          max_progress=teacher_cfg.max_progress,
-        )
-        root_pose[use_reference, 0:2] = env.scene.env_origins[ref_ids, 0:2]
-        root_pose[use_reference, 2] = (
-          sample["root_pos"][:, 2]
-          + env.scene.env_origins[ref_ids, 2]
-          + teacher_cfg.height_offset
-        )
-        root_pose[use_reference, 3:7] = sample["root_quat"]
-        root_vel[use_reference, 0:3] = sample["root_lin_vel"]
-        root_vel[use_reference, 3:6] = sample["root_ang_vel"]
-        joint_pos[use_reference] = sample["joint_pos"]
-        joint_vel[use_reference] = sample["joint_vel"]
+      root_pose[teacher_mask, 0:2] = env.scene.env_origins[ref_ids, 0:2]
+      root_pose[teacher_mask, 2] = (
+        sample["root_pos"][:, 2]
+        + env.scene.env_origins[ref_ids, 2]
+        + teacher_cfg.height_offset
+      )
+      root_pose[teacher_mask, 3:7] = sample["root_quat"]
+      root_vel[teacher_mask, 0:3] = sample["root_lin_vel"]
+      root_vel[teacher_mask, 3:6] = sample["root_ang_vel"]
+      joint_pos[teacher_mask] = sample["joint_pos"]
+      joint_vel[teacher_mask] = sample["joint_vel"]
 
     joint_ids = asset_cfg.joint_ids
     if isinstance(joint_ids, slice):
@@ -223,6 +296,197 @@ class RecoveryReset(ManagerTermBase):
       env_ids=env_ids,
       joint_ids=joint_ids,
     )
+
+  def _sample_fallen_pose_state(
+    self,
+    env: ManagerBasedRlEnv,
+    env_ids: torch.Tensor,
+    asset: Entity,
+    asset_cfg: SceneEntityCfg,
+    fallen_pose_library,
+    motion_fallen_progress_range: tuple[float, float],
+    motion_fallen_zero_velocity: bool,
+    height_offset: float,
+    xy_jitter: float,
+    yaw_jitter: float,
+    joint_jitter: float,
+  ) -> dict[str, torch.Tensor]:
+    if self._motion_loader is not None:
+      return self._sample_motion_fallen_pose_state(
+        env=env,
+        env_ids=env_ids,
+        height_offset=height_offset,
+        progress_range=motion_fallen_progress_range,
+        zero_velocity=motion_fallen_zero_velocity,
+      )
+    if fallen_pose_library:
+      return self._sample_explicit_fallen_pose_state(
+        env=env,
+        env_ids=env_ids,
+        asset=asset,
+        asset_cfg=asset_cfg,
+        fallen_pose_library=fallen_pose_library,
+        height_offset=height_offset,
+        xy_jitter=xy_jitter,
+        yaw_jitter=yaw_jitter,
+        joint_jitter=joint_jitter,
+      )
+    rand_pose, rand_vel, rand_joint_pos, rand_joint_vel = self._sample_random_fall_state(
+      env=env,
+      env_ids=env_ids,
+      asset=asset,
+      asset_cfg=asset_cfg,
+      base_height_range=(0.22, 0.28),
+      joint_position_range=(-0.1, 0.1),
+      joint_velocity_range=(0.0, 0.0),
+      root_velocity_range={},
+    )
+    return {
+      "root_pose": rand_pose,
+      "root_vel": rand_vel,
+      "joint_pos": rand_joint_pos,
+      "joint_vel": rand_joint_vel,
+    }
+
+  def _sample_motion_fallen_pose_state(
+    self,
+    env: ManagerBasedRlEnv,
+    env_ids: torch.Tensor,
+    height_offset: float,
+    progress_range: tuple[float, float],
+    zero_velocity: bool,
+  ) -> dict[str, torch.Tensor]:
+    assert self._motion_loader is not None
+    sample = self._motion_loader.sample(
+      num_samples=len(env_ids),
+      min_progress=progress_range[0],
+      max_progress=progress_range[1],
+    )
+    root_pose = torch.zeros((len(env_ids), 7), device=env.device)
+    root_pose[:, 0:2] = env.scene.env_origins[env_ids, 0:2]
+    root_pose[:, 2] = sample["root_pos"][:, 2] + env.scene.env_origins[env_ids, 2] + height_offset
+    root_pose[:, 3:7] = sample["root_quat"]
+    if zero_velocity:
+      root_vel = torch.zeros((len(env_ids), 6), device=env.device)
+      joint_vel = torch.zeros_like(sample["joint_pos"])
+    else:
+      root_vel = torch.cat([sample["root_lin_vel"], sample["root_ang_vel"]], dim=-1)
+      joint_vel = sample["joint_vel"]
+    return {
+      "root_pose": root_pose,
+      "root_vel": root_vel,
+      "joint_pos": sample["joint_pos"],
+      "joint_vel": joint_vel,
+    }
+
+  def _sample_explicit_fallen_pose_state(
+    self,
+    env: ManagerBasedRlEnv,
+    env_ids: torch.Tensor,
+    asset: Entity,
+    asset_cfg: SceneEntityCfg,
+    fallen_pose_library,
+    height_offset: float,
+    xy_jitter: float,
+    yaw_jitter: float,
+    joint_jitter: float,
+  ) -> dict[str, torch.Tensor]:
+    num_envs = len(env_ids)
+    root_pose = asset.data.default_root_state[env_ids, :7].clone()
+    root_vel = torch.zeros((num_envs, 6), device=env.device)
+    joint_pos = asset.data.default_joint_pos[env_ids][:, asset_cfg.joint_ids].clone()
+    joint_vel = torch.zeros_like(joint_pos)
+
+    pose_indices = torch.randint(0, len(fallen_pose_library), (num_envs,), device=env.device)
+    joint_names = asset.joint_names
+    joint_ids = asset_cfg.joint_ids
+    if isinstance(joint_ids, slice):
+      joint_ids = torch.arange(asset.num_joints, device=env.device)
+    elif isinstance(joint_ids, list):
+      joint_ids = torch.tensor(joint_ids, device=env.device)
+
+    for pose_idx, pose_cfg in enumerate(fallen_pose_library):
+      mask = pose_indices == pose_idx
+      if not torch.any(mask):
+        continue
+      count = int(mask.sum().item())
+      masked_env_ids = env_ids[mask]
+
+      base_quat = quat_from_euler_xyz(
+        torch.full((count,), pose_cfg.root_rpy[0], device=env.device),
+        torch.full((count,), pose_cfg.root_rpy[1], device=env.device),
+        torch.full((count,), pose_cfg.root_rpy[2], device=env.device),
+      )
+      yaw_delta = quat_from_euler_xyz(
+        torch.zeros(count, device=env.device),
+        torch.zeros(count, device=env.device),
+        sample_uniform(
+          torch.tensor(-yaw_jitter, device=env.device),
+          torch.tensor(yaw_jitter, device=env.device),
+          (count,),
+          env.device,
+        ),
+      )
+      root_pose[mask, 0] = (
+        env.scene.env_origins[masked_env_ids, 0]
+        + pose_cfg.root_pos[0]
+        + sample_uniform(
+          torch.tensor(-xy_jitter, device=env.device),
+          torch.tensor(xy_jitter, device=env.device),
+          (count,),
+          env.device,
+        )
+      )
+      root_pose[mask, 1] = (
+        env.scene.env_origins[masked_env_ids, 1]
+        + pose_cfg.root_pos[1]
+        + sample_uniform(
+          torch.tensor(-xy_jitter, device=env.device),
+          torch.tensor(xy_jitter, device=env.device),
+          (count,),
+          env.device,
+        )
+      )
+      root_pose[mask, 2] = (
+        env.scene.env_origins[masked_env_ids, 2]
+        + pose_cfg.root_pos[2]
+        + height_offset
+      )
+      root_pose[mask, 3:7] = quat_mul(yaw_delta, base_quat)
+
+      pose_joint_pos = torch.tensor(
+        resolve_expr(pose_cfg.joint_pos, joint_names, 0.0),
+        dtype=torch.float32,
+        device=env.device,
+      )[joint_ids]
+      pose_joint_vel = torch.tensor(
+        resolve_expr(pose_cfg.joint_vel, joint_names, 0.0),
+        dtype=torch.float32,
+        device=env.device,
+      )[joint_ids]
+      joint_pos[mask] = pose_joint_pos.unsqueeze(0).repeat(count, 1)
+      joint_vel[mask] = pose_joint_vel.unsqueeze(0).repeat(count, 1)
+
+      if joint_jitter > 0.0:
+        joint_pos[mask] += sample_uniform(
+          torch.tensor(-joint_jitter, device=env.device),
+          torch.tensor(joint_jitter, device=env.device),
+          joint_pos[mask].shape,
+          env.device,
+        )
+
+    joint_pos_limits = asset.data.soft_joint_pos_limits[env_ids][:, joint_ids]
+    joint_pos = joint_pos.clamp(
+      min=joint_pos_limits[..., 0],
+      max=joint_pos_limits[..., 1],
+    )
+
+    return {
+      "root_pose": root_pose,
+      "root_vel": root_vel,
+      "joint_pos": joint_pos,
+      "joint_vel": joint_vel,
+    }
 
   def _sample_random_fall_state(
     self,

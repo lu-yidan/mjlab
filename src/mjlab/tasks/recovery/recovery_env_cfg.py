@@ -34,10 +34,21 @@ class RecoveryTeacherCfg:
 
   motion_path: str = ""
   motion_weights: dict[str, float] = field(default_factory=dict)
-  reference_probability: float = 0.6
-  min_progress: float = 0.05
-  max_progress: float = 0.95
+  reference_probability: float = 0.5
+  min_progress: float = 0.08
+  max_progress: float = 0.45
   height_offset: float = 0.05
+
+
+@dataclass(kw_only=True)
+class RecoveryFallenPoseCfg:
+  """A physically plausible fallen pose used for reset or evaluation."""
+
+  name: str
+  root_pos: tuple[float, float, float]
+  root_rpy: tuple[float, float, float]
+  joint_pos: dict[str, float]
+  joint_vel: dict[str, float] = field(default_factory=lambda: {".*": 0.0})
 
 
 @dataclass(kw_only=True)
@@ -117,6 +128,15 @@ def make_recovery_env_cfg() -> RecoveryEnvCfg:
         "base_height_range": (0.18, 0.38),
         "joint_position_range": (-0.45, 0.45),
         "joint_velocity_range": (-1.0, 1.0),
+        "fallen_pose_library": (),
+        "fallen_pose_probability": 0.5,
+        "random_fall_probability": 0.0,
+        "motion_fallen_progress_range": (0.0, 0.08),
+        "motion_fallen_zero_velocity": True,
+        "fallen_pose_height_offset": 0.02,
+        "fallen_pose_xy_jitter": 0.01,
+        "fallen_pose_yaw_jitter": 0.1,
+        "fallen_pose_joint_jitter": 0.03,
         "root_velocity_range": {
           "x": (-0.2, 0.2),
           "y": (-0.2, 0.2),
@@ -257,8 +277,8 @@ def make_recovery_env_cfg() -> RecoveryEnvCfg:
       params={
         "event_name": "recovery_reset",
         "stages": [
-          {"step": 0, "probability": 0.6},
-          {"step": 5_000 * 24, "probability": 0.35},
+          {"step": 0, "probability": 0.5},
+          {"step": 5_000 * 24, "probability": 0.3},
           {"step": 15_000 * 24, "probability": 0.15},
         ],
       },
