@@ -24,6 +24,7 @@ def upward_assistance_force(
   env: ManagerBasedRlEnv,
   env_ids: torch.Tensor | slice,
   event_name: str,
+  success_body_name: str,
   success_height: float,
   success_upright_threshold: float,
   decrement: float,
@@ -41,9 +42,15 @@ def upward_assistance_force(
     )
 
   asset = env.scene["robot"]
-  root_height = asset.data.root_link_pos_w[env_ids, 2] - env.scene.env_origins[env_ids, 2]
+  body_ids, _ = asset.find_bodies(success_body_name)
+  if not body_ids:
+    raise ValueError(f"Body '{success_body_name}' not found on robot.")
+  body_height = (
+    asset.data.body_link_pos_w[env_ids, body_ids[0], 2]
+    - env.scene.env_origins[env_ids, 2]
+  )
   uprightness = -asset.data.projected_gravity_b[env_ids, 2]
-  success = (root_height > success_height) & (uprightness > success_upright_threshold)
+  success = (body_height > success_height) & (uprightness > success_upright_threshold)
   if torch.any(success):
     success_ids = env_ids[success]
     event_term.force[success_ids] = (

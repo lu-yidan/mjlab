@@ -302,10 +302,11 @@ def make_recovery_env_cfg() -> RecoveryEnvCfg:
       func=mdp.upward_assistance_force,
       params={
         "event_name": "upward_assist",
-        "success_height": 0.9,
-        "success_upright_threshold": 0.9,
-        "decrement": 20.0,
-        "min_force": 0.0,
+        "success_body_name": "torso_link",
+        "success_height": 0.78,
+        "success_upright_threshold": 0.8,
+        "decrement": 10.0,
+        "min_force": 20.0,
       },
     ),
     "push_velocity": CurriculumTermCfg(
