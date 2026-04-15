@@ -13,6 +13,10 @@ Added
 - NaN guard now captures mocap body poses (``mocap_pos``, ``mocap_quat``)
   when the model has mocap bodies, enabling full state reconstruction in
   the dump viewer for fixed-base entities.
+- Added local tracking-motion dataset analysis and conversion helpers
+  (``analyze_tracking_csv``, ``sonic_to_csv``, and new local-output options
+  in ``csv_to_npz``) so raw motion dumps can be inspected, converted,
+  rendered, and played back without requiring a W&B upload.
 
 Changed
 ^^^^^^^

@@ -19,6 +19,15 @@ applies to other robots and datasets.
 If you have a CSV file containing base pose and joint positions, you can
 convert it to mjlab's standard format using the ``csv_to_npz`` script.
 
+Before converting a large batch, you can quickly sanity-check the source data:
+
+.. code-block:: bash
+
+   uv run python -m mjlab.scripts.analyze_tracking_csv \
+     --input-path /path/to/csv_dir \
+     --input-fps 100 \
+     --output-json artifacts/tracking_csv_report.json
+
 .. code-block:: bash
 
    uv run python -m mjlab.scripts.csv_to_npz \
@@ -34,10 +43,26 @@ Arguments:
   LAFAN1-based retargeted dataset for Unitree G1.
 - **``--output-name``**: Logical name for this motion sequence. This becomes
   both the local identifier and the W&B artifact name.
+- **``--output-file``**: Optional local path for the converted ``motion.npz``.
+  This defaults to ``/tmp/motion.npz`` and is useful when you want to train or
+  play locally without uploading to W&B.
 - **``--input-fps``**: Frame rate of the original CSV.
 - **``--output-fps``**: Desired frame rate in the simulator.
+- **``--upload-to-wandb``**: When ``False``, conversion stays fully local.
 - **``--render``**: When ``True``, the script renders a video and logs it to
   W&B alongside the motion.
+
+For a fully local workflow with 100 Hz source motions:
+
+.. code-block:: bash
+
+   uv run python -m mjlab.scripts.csv_to_npz \
+     --input-file /path/to/source.csv \
+     --input-fps 100 \
+     --output-fps 50 \
+     --output-file artifacts/sonic/source_motion.npz \
+     --upload-to-wandb False \
+     --render True
 
 What the script does
 ~~~~~~~~~~~~~~~~~~~~
