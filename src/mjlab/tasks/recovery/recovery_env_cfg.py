@@ -258,6 +258,99 @@ def make_recovery_env_cfg() -> RecoveryEnvCfg:
         "upright_threshold": 0.9,
       },
     ),
+    "late_phase_orientation": RewardTermCfg(
+      func=mdp.late_phase_orientation,
+      weight=1.0,
+      params={
+        "activation_height": 0.68,
+        "full_weight_height": 0.75,
+        "std": 0.2,
+      },
+    ),
+    "late_phase_base_motion": RewardTermCfg(
+      func=mdp.late_phase_base_motion,
+      weight=1.0,
+      params={
+        "activation_height": 0.68,
+        "full_weight_height": 0.75,
+        "lin_vel_std": 0.15,
+        "ang_vel_std": 0.2,
+      },
+    ),
+    "late_phase_ankle_vel_l2": RewardTermCfg(
+      func=mdp.late_phase_joint_vel_l2,
+      weight=-2.0e-3,
+      params={
+        "activation_height": 0.66,
+        "full_weight_height": 0.74,
+        "asset_cfg": SceneEntityCfg(
+          "robot",
+          joint_names=(
+            "left_ankle_pitch_joint",
+            "left_ankle_roll_joint",
+            "right_ankle_pitch_joint",
+            "right_ankle_roll_joint",
+          ),
+          preserve_order=True,
+        ),
+      },
+    ),
+    "late_phase_ankle_home": RewardTermCfg(
+      func=mdp.late_phase_posture,
+      weight=0.45,
+      params={
+        "activation_height": 0.68,
+        "full_weight_height": 0.76,
+        "std": 0.2,
+        "asset_cfg": SceneEntityCfg(
+          "robot",
+          joint_names=(
+            "left_ankle_pitch_joint",
+            "left_ankle_roll_joint",
+            "right_ankle_pitch_joint",
+            "right_ankle_roll_joint",
+          ),
+          preserve_order=True,
+        ),
+      },
+    ),
+    "late_phase_hip_home": RewardTermCfg(
+      func=mdp.late_phase_posture,
+      weight=0.35,
+      params={
+        "activation_height": 0.69,
+        "full_weight_height": 0.76,
+        "std": 0.25,
+        "asset_cfg": SceneEntityCfg(
+          "robot",
+          joint_names=(
+            "left_hip_yaw_joint",
+            "left_hip_roll_joint",
+            "right_hip_yaw_joint",
+            "right_hip_roll_joint",
+          ),
+          preserve_order=True,
+        ),
+      },
+    ),
+    "late_phase_arm_home": RewardTermCfg(
+      func=mdp.late_phase_posture,
+      weight=0.35,
+      params={
+        "activation_height": 0.7,
+        "full_weight_height": 0.76,
+        "std": 0.35,
+        "asset_cfg": SceneEntityCfg(
+          "robot",
+          joint_names=(
+            ".*_shoulder_.*_joint",
+            ".*_elbow_joint",
+            ".*_wrist_.*_joint",
+          ),
+          preserve_order=True,
+        ),
+      },
+    ),
     "self_collisions": RewardTermCfg(
       func=mdp.self_collision_cost,
       weight=-1.0,
@@ -265,6 +358,7 @@ def make_recovery_env_cfg() -> RecoveryEnvCfg:
     ),
     "joint_acc_l2": RewardTermCfg(func=envs_mdp.joint_acc_l2, weight=-2.5e-7),
     "action_rate_l2": RewardTermCfg(func=envs_mdp.action_rate_l2, weight=-0.01),
+    "action_acc_l2": RewardTermCfg(func=envs_mdp.action_acc_l2, weight=-2.5e-3),
     "joint_torques_l2": RewardTermCfg(func=envs_mdp.joint_torques_l2, weight=-2.5e-6),
     "joint_pos_limits": RewardTermCfg(
       func=envs_mdp.joint_pos_limits,
@@ -306,7 +400,7 @@ def make_recovery_env_cfg() -> RecoveryEnvCfg:
         "success_height": 0.78,
         "success_upright_threshold": 0.8,
         "decrement": 10.0,
-        "min_force": 20.0,
+        "min_force": 0.0,
       },
     ),
     "push_velocity": CurriculumTermCfg(
