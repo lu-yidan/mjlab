@@ -13,19 +13,6 @@
       "Bash(git ls-tree:*)"
     ]
   },
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "input=$(cat); echo \"$input\" | grep -q 'RoboMimicDeploy_G1' || uv run ruff format"
-          }
-        ]
-      }
-    ]
-  },
   "enabledPlugins": {
     "code-simplifier@claude-plugins-official": true,
     "pr-review-toolkit@claude-plugins-official": true
