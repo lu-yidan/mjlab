@@ -22,7 +22,7 @@ def test_recovery_tasks_are_registered(recovery_task_ids: list[str]) -> None:
 def test_recovery_tasks_do_not_expose_reference_commands(
     recovery_task_ids: list[str],
 ) -> None:
-    """Recovery tasks should not depend on reference-motion commands at inference."""
+    """Recovery tasks should not depend on reference-motion commands."""
     for task_id in recovery_task_ids:
         cfg = load_env_cfg(task_id)
         assert cfg.commands == {}, (
@@ -35,7 +35,9 @@ def test_g1_recovery_has_required_sensors(recovery_task_ids: list[str]) -> None:
     """G1 recovery tasks should retain collision/contact sensing."""
     for task_id in recovery_task_ids:
         cfg = load_env_cfg(task_id)
-        assert cfg.scene.sensors is not None, f"Task {task_id} has no sensors"
+        assert cfg.scene.sensors is not None, (
+            f"Task {task_id} has no sensors"
+        )
         sensor_names = {s.name for s in cfg.scene.sensors}
         assert "feet_ground_contact" in sensor_names, (
             f"Task {task_id} missing feet_ground_contact sensor"
@@ -54,14 +56,15 @@ def test_g1_recovery_has_correct_action_scale(recovery_task_ids: list[str]) -> N
             f"Task {task_id} joint_pos action is not JointPositionActionCfg"
         )
         assert joint_pos_action.scale == G1_ACTION_SCALE, (
-            f"Task {task_id} action scale mismatch, expected G1_ACTION_SCALE"
+            "Task "
+            f"{task_id} action scale mismatch, expected G1_ACTION_SCALE"
         )
 
 
 def test_recovery_play_mode_disables_teacher_and_push(
     recovery_task_ids: list[str],
 ) -> None:
-    """Play mode should remove deployment-time dependencies on teacher motion."""
+    """Play mode should remove deployment-time teacher dependencies."""
     for task_id in recovery_task_ids:
         cfg = load_env_cfg(task_id, play=True)
         assert isinstance(cfg, RecoveryEnvCfg), (
@@ -87,7 +90,8 @@ def test_recovery_play_mode_disables_teacher_and_push(
             )
         reset_params = cfg.events["recovery_reset"].params
         assert reset_params["fallen_pose_probability"] == 1.0, (
-            f"Task {task_id} (play mode) should use only fallen poses for reset"
+            "Task "
+            f"{task_id} (play mode) should use only fallen poses for reset"
         )
         assert reset_params["random_fall_probability"] == 0.0, (
             f"Task {task_id} (play mode) should disable random air-drop reset"
@@ -102,22 +106,75 @@ def test_recovery_play_mode_disables_teacher_and_push(
             f"Task {task_id} (play mode) should not settle teacher resets"
         )
         assert reset_params["fallen_post_reset_settle_steps"] == 12, (
-            f"Task {task_id} (play mode) should use longer settle for fallen resets"
+            "Task "
+            f"{task_id} (play mode) should use longer settle for fallen resets"
         )
         assert reset_params["random_post_reset_settle_steps"] == 12, (
-            f"Task {task_id} (play mode) should use longer settle for random fallback resets"
+            "Task "
+            f"{task_id} (play mode) should use longer settle for random fallback resets"
         )
 
 
 def test_recovery_actor_observations_are_motion_free(
     recovery_task_ids: list[str],
 ) -> None:
-    """Actor observations should use body state only, not reference motion inputs."""
+    """Actor observations should use body state only."""
     for task_id in recovery_task_ids:
         cfg = load_env_cfg(task_id)
         actor_terms = cfg.observations["actor"].terms
-        forbidden_terms = {"command", "motion_anchor_pos_b", "motion_anchor_ori_b"}
+        forbidden_terms = {
+            "command",
+            "motion_anchor_pos_b",
+            "motion_anchor_ori_b",
+        }
         assert forbidden_terms.isdisjoint(actor_terms), (
             f"Task {task_id} actor observations unexpectedly contain "
             "reference-motion terms"
+        )
+
+
+def test_recovery_push_curriculum_strengthens_disturbances(
+    recovery_task_ids: list[str],
+) -> None:
+    """Push curriculum should ramp disturbances over reachable stages."""
+    for task_id in recovery_task_ids:
+        cfg = load_env_cfg(task_id)
+        stages = cfg.curriculum["push_velocity"].params["stages"]
+
+        assert len(stages) == 4, (
+            f"Task {task_id} should expose four push stages"
+        )
+
+        steps = [stage["step"] for stage in stages]
+        assert steps == sorted(steps), (
+            f"Task {task_id} push stages must be ordered"
+        )
+
+        x_magnitudes = [
+            abs(stage["velocity_range"]["x"][1]) for stage in stages
+        ]
+        y_magnitudes = [
+            abs(stage["velocity_range"]["y"][1]) for stage in stages
+        ]
+        yaw_magnitudes = [
+            abs(stage["velocity_range"]["yaw"][1]) for stage in stages
+        ]
+
+        assert x_magnitudes == sorted(x_magnitudes), (
+            f"Task {task_id} x push magnitudes must be non-decreasing"
+        )
+        assert y_magnitudes == sorted(y_magnitudes), (
+            f"Task {task_id} y push magnitudes must be non-decreasing"
+        )
+        assert yaw_magnitudes == sorted(yaw_magnitudes), (
+            f"Task {task_id} yaw push magnitudes must be non-decreasing"
+        )
+
+        assert x_magnitudes[-1] > x_magnitudes[0], (
+            "Task "
+            f"{task_id} final x push stage should be stronger than the initial stage"
+        )
+        assert yaw_magnitudes[-1] > yaw_magnitudes[0], (
+            "Task "
+            f"{task_id} final yaw push stage should be stronger than the initial stage"
         )

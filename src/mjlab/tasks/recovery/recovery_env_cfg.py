@@ -165,7 +165,7 @@ def make_recovery_env_cfg() -> RecoveryEnvCfg:
     "push_robot": EventTermCfg(
       func=envs_mdp.push_by_setting_velocity,
       mode="interval",
-      interval_range_s=(5.0, 8.0),
+      interval_range_s=(4.0, 6.0),
       params={
         "velocity_range": {
           "x": (-0.15, 0.15),
@@ -411,25 +411,34 @@ def make_recovery_env_cfg() -> RecoveryEnvCfg:
           {
             "step": 0,
             "velocity_range": {
-              "x": (-0.05, 0.05),
-              "y": (-0.05, 0.05),
-              "yaw": (-0.15, 0.15),
+              "x": (-0.08, 0.08),
+              "y": (-0.08, 0.08),
+              "yaw": (-0.2, 0.2),
             },
           },
           {
-            "step": 8_000 * 24,
+            # Ramp robustness during the 4400->6000 fine-tune window.
+            "step": 4_500 * 24,
             "velocity_range": {
-              "x": (-0.1, 0.1),
-              "y": (-0.1, 0.1),
-              "yaw": (-0.25, 0.25),
-            },
-          },
-          {
-            "step": 16_000 * 24,
-            "velocity_range": {
-              "x": (-0.15, 0.15),
-              "y": (-0.15, 0.15),
+              "x": (-0.14, 0.14),
+              "y": (-0.14, 0.14),
               "yaw": (-0.35, 0.35),
+            },
+          },
+          {
+            "step": 5_000 * 24,
+            "velocity_range": {
+              "x": (-0.2, 0.2),
+              "y": (-0.2, 0.2),
+              "yaw": (-0.5, 0.5),
+            },
+          },
+          {
+            "step": 5_500 * 24,
+            "velocity_range": {
+              "x": (-0.24, 0.24),
+              "y": (-0.24, 0.24),
+              "yaw": (-0.6, 0.6),
             },
           },
         ],
