@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Metrics &#8212; mjlab Documentation</title>
+    <title>Recorders &#8212; mjlab Documentation</title>
   
   
   
@@ -51,12 +51,12 @@
     <script src="../_static/copybutton.js?v=f281be69"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=887ef09a"></script>
     <script src="../_static/design-tabs.js?v=f930bc37"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'source/metrics';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'source/recorders';</script>
     <link rel="icon" href="../_static/favicon.ico"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Recorders" href="recorders.html" />
-    <link rel="prev" title="Curriculum" href="curriculum.html" />
+    <link rel="next" title="Training with RSL-RL" href="training/rsl_rl.html" />
+    <link rel="prev" title="Metrics" href="metrics.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
     <meta name="docbuild:last-update" content="May 15, 2026"/>
@@ -169,7 +169,7 @@
 <div class="sidebar-version-switcher">
   <label class="sidebar-version-label" for="version-select">Version</label>
   <select id="version-select" class="sidebar-version-select" onchange="location = this.value;">
-    <option value="metrics.html" selected>main</option>
+    <option value="recorders.html" selected>main</option>
   </select>
 </div>
 </div>
@@ -212,8 +212,8 @@
 <li class="toctree-l1"><a class="reference internal" href="events.html">Events</a></li>
 <li class="toctree-l1"><a class="reference internal" href="randomization.html">Domain Randomization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="curriculum.html">Curriculum</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Metrics</a></li>
-<li class="toctree-l1"><a class="reference internal" href="recorders.html">Recorders</a></li>
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">Metrics</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Recorders</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Training &amp; Debugging</span></p>
 <ul class="nav bd-sidenav">
@@ -322,7 +322,7 @@
       
       
       
-      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/source/metrics.rst" target="_blank"
+      <li><a href="https://github.com/mujocolab/mjlab/edit/main/docs/source/recorders.rst" target="_blank"
    class="btn btn-sm btn-source-edit-button dropdown-item"
    title="Suggest edit"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -339,7 +339,7 @@
       
       
       
-      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsource/metrics.html&body=Your%20issue%20content%20here." target="_blank"
+      <li><a href="https://github.com/mujocolab/mjlab/issues/new?title=Issue%20on%20page%20%2Fsource/recorders.html&body=Your%20issue%20content%20here." target="_blank"
    class="btn btn-sm btn-source-issues-button dropdown-item"
    title="Open an issue"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -369,7 +369,7 @@
       
       
       
-      <li><a href="../_sources/source/metrics.rst" target="_blank"
+      <li><a href="../_sources/source/recorders.rst" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -453,7 +453,7 @@ document.write(`
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Metrics</h1>
+    <h1>Recorders</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
@@ -463,9 +463,9 @@ document.write(`
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lifecycle-hooks">Lifecycle hooks</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#writing-a-recorder-term">Writing a recorder term</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#registration">Registration</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-metrics-are-computed">How metrics are computed</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#writing-custom-metric-functions">Writing custom metric functions</a></li>
 </ul>
             </nav>
         </div>
@@ -477,90 +477,110 @@ document.write(`
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section id="metrics">
-<span id="id1"></span><h1>Metrics<a class="headerlink" href="#metrics" title="Link to this heading">#</a></h1>
-<p>The metrics manager logs per-step scalar values as episode averages. Unlike
-rewards, metrics carry no weight and are not scaled by the step duration.
-They exist purely for diagnostics: tracking quantities such as tracking
-error, contact forces, or energy consumption alongside reward curves
-without influencing the optimization.</p>
-<p>Metrics are computed every environment step, accumulated per environment,
-and averaged over the episode length when the environment resets. The
-resulting averages are written to the training logger (TensorBoard or
-Weights &amp; Biases) under the <code class="docutils literal notranslate"><span class="pre">Episode_Metrics/</span></code> prefix.</p>
-<p>If the <code class="docutils literal notranslate"><span class="pre">metrics</span></code> dictionary on <code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg</span></code> is empty, the
-environment substitutes a lightweight no-op manager with zero overhead.</p>
+  <section id="recorders">
+<span id="id1"></span><h1>Recorders<a class="headerlink" href="#recorders" title="Link to this heading">#</a></h1>
+<p>The recorder manager provides lifecycle hooks for logging data during
+rollouts. Unlike rewards, recorders have no effect on the optimization
+loop. They exist purely to let you capture observations, actions, or any
+other environment state without modifying mjlab internals.</p>
+<p>Each recorder term is a class that you implement. mjlab calls its methods
+at the right moments and leaves all I/O decisions to you. If the <code class="docutils literal notranslate"><span class="pre">recorders</span></code>
+dictionary on <code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg</span></code> is empty, the environment substitutes a
+lightweight no-op manager with zero overhead.</p>
+<section id="lifecycle-hooks">
+<h2>Lifecycle hooks<a class="headerlink" href="#lifecycle-hooks" title="Link to this heading">#</a></h2>
+<p>The manager exposes three hooks per term:</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">record_pre_reset(env_ids)</span></code></dt><dd><p>Called inside <code class="docutils literal notranslate"><span class="pre">env.step()</span></code> before terminated environments are reset.
+<code class="docutils literal notranslate"><span class="pre">obs_buf</span></code> holds the observation from the end of the <em>previous</em> step
+(the input the agent used to choose the terminal action, not the
+post-action terminal state). <code class="docutils literal notranslate"><span class="pre">action_manager.action</span></code> holds the
+terminal action and is still valid here; it will be zeroed for these
+environments by <code class="docutils literal notranslate"><span class="pre">_reset_idx</span></code> immediately after. <code class="docutils literal notranslate"><span class="pre">reward_buf</span></code> holds
+the terminal reward. This is the right place to record the terminal
+transition <code class="docutils literal notranslate"><span class="pre">(obs_t,</span> <span class="pre">action_t,</span> <span class="pre">reward_t,</span> <span class="pre">done=True)</span></code>.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">record_post_reset(env_ids)</span></code></dt><dd><p>Called after a reset completes and fresh observations are available.
+Fires at the end of <code class="docutils literal notranslate"><span class="pre">env.reset()</span></code> (all environments) and within
+<code class="docutils literal notranslate"><span class="pre">env.step()</span></code> after each batch of terminated environments is reset.
+<code class="docutils literal notranslate"><span class="pre">obs_buf[env_ids]</span></code> holds the initial observation of the new episode;
+<code class="docutils literal notranslate"><span class="pre">action_manager.action[env_ids]</span></code> is zero. Use this to initialize
+per-episode state or record the first observation.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">record_post_step()</span></code></dt><dd><p>Called at the end of every <code class="docutils literal notranslate"><span class="pre">env.step()</span></code> with fresh observations.
+For environments that reset during this step, <code class="docutils literal notranslate"><span class="pre">action_manager.action</span></code>
+has been zeroed and <code class="docutils literal notranslate"><span class="pre">obs_buf</span></code> holds the initial state of the new
+episode rather than the post-action terminal observation. Use
+<code class="docutils literal notranslate"><span class="pre">record_pre_reset</span></code> for those environments’ terminal transitions and
+<code class="docutils literal notranslate"><span class="pre">self._env.reset_buf</span></code> to identify which environments reset.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">close()</span></code></dt><dd><p>Called when the environment closes. Release file handles and flush
+buffers here.</p>
+</dd>
+</dl>
+</section>
+<section id="writing-a-recorder-term">
+<h2>Writing a recorder term<a class="headerlink" href="#writing-a-recorder-term" title="Link to this heading">#</a></h2>
+<p>Subclass <a class="reference internal" href="api/managers.html#mjlab.managers.RecorderTerm" title="mjlab.managers.RecorderTerm"><code class="xref py py-class docutils literal notranslate"><span class="pre">RecorderTerm</span></code></a> and override whichever
+hooks you need. The environment is available as <code class="docutils literal notranslate"><span class="pre">self._env</span></code>, giving
+access to <code class="docutils literal notranslate"><span class="pre">self._env.obs_buf</span></code>, <code class="docutils literal notranslate"><span class="pre">self._env.action_manager.action</span></code>, and
+all other managers.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">csv</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.managers</span><span class="w"> </span><span class="kn">import</span> <span class="n">RecorderTerm</span><span class="p">,</span> <span class="n">RecorderTermCfg</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">CsvRecorder</span><span class="p">(</span><span class="n">RecorderTerm</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cfg</span><span class="p">,</span> <span class="n">env</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">env</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">cfg</span><span class="o">.</span><span class="n">params</span><span class="p">[</span><span class="s2">&quot;path&quot;</span><span class="p">],</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">newline</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_writer</span> <span class="o">=</span> <span class="n">csv</span><span class="o">.</span><span class="n">writer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_file</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">record_pre_reset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env_ids</span><span class="p">):</span>
+        <span class="c1"># Terminal transition: action is still intact here.</span>
+        <span class="c1"># It will be zeroed by _reset_idx immediately after this returns.</span>
+        <span class="n">obs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_env</span><span class="o">.</span><span class="n">obs_buf</span><span class="p">[</span><span class="s2">&quot;actor&quot;</span><span class="p">][</span><span class="n">env_ids</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="n">act</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_env</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">action</span><span class="p">[</span><span class="n">env_ids</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">o</span><span class="p">,</span> <span class="n">a</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">act</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="o">+</span> <span class="n">a</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">record_post_step</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Skip envs that just reset: their terminal pair was written</span>
+        <span class="c1"># in record_pre_reset and their action is now zeroed.</span>
+        <span class="n">mask</span> <span class="o">=</span> <span class="o">~</span><span class="bp">self</span><span class="o">.</span><span class="n">_env</span><span class="o">.</span><span class="n">reset_buf</span>
+        <span class="n">obs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_env</span><span class="o">.</span><span class="n">obs_buf</span><span class="p">[</span><span class="s2">&quot;actor&quot;</span><span class="p">][</span><span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="n">act</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_env</span><span class="o">.</span><span class="n">action_manager</span><span class="o">.</span><span class="n">action</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">o</span><span class="p">,</span> <span class="n">a</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">act</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_writer</span><span class="o">.</span><span class="n">writerow</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="o">+</span> <span class="n">a</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>The term receives the full <code class="docutils literal notranslate"><span class="pre">cfg</span></code> object so it can read any values you
+put in <code class="docutils literal notranslate"><span class="pre">cfg.params</span></code>.</p>
+</section>
 <section id="registration">
 <h2>Registration<a class="headerlink" href="#registration" title="Link to this heading">#</a></h2>
-<p>Each metric term is registered by name in the <code class="docutils literal notranslate"><span class="pre">metrics</span></code> dictionary of
-<code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg</span></code>. The configuration is minimal: a callable and an
-optional <code class="docutils literal notranslate"><span class="pre">params</span></code> dictionary.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.managers.metrics_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetricsTermCfg</span>
+<p>Add the term to the <code class="docutils literal notranslate"><span class="pre">recorders</span></code> dictionary on your environment config:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.managers</span><span class="w"> </span><span class="kn">import</span> <span class="n">RecorderTermCfg</span>
 
-<span class="n">metrics</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;base_height&quot;</span><span class="p">:</span> <span class="n">MetricsTermCfg</span><span class="p">(</span>
-        <span class="n">func</span><span class="o">=</span><span class="n">base_height</span><span class="p">,</span>
-        <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;asset_cfg&quot;</span><span class="p">:</span> <span class="n">SceneEntityCfg</span><span class="p">(</span><span class="s2">&quot;robot&quot;</span><span class="p">)},</span>
-    <span class="p">),</span>
-<span class="p">}</span>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MyEnvCfg</span><span class="p">(</span><span class="n">SomeTaskEnvCfg</span><span class="p">):</span>
+    <span class="n">recorders</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;csv&quot;</span><span class="p">:</span> <span class="n">RecorderTermCfg</span><span class="p">(</span>
+            <span class="n">func</span><span class="o">=</span><span class="n">CsvRecorder</span><span class="p">,</span>
+            <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;path&quot;</span><span class="p">:</span> <span class="s2">&quot;rollout.csv&quot;</span><span class="p">},</span>
+        <span class="p">)</span>
+    <span class="p">})</span>
 </pre></div>
 </div>
-<p>The callable receives <code class="docutils literal notranslate"><span class="pre">env</span></code> as its first argument and any entries in
-<code class="docutils literal notranslate"><span class="pre">params</span></code> as keyword arguments. It must return a tensor of shape
-<code class="docutils literal notranslate"><span class="pre">[num_envs]</span></code>, one scalar per environment per step.</p>
-</section>
-<section id="how-metrics-are-computed">
-<h2>How metrics are computed<a class="headerlink" href="#how-metrics-are-computed" title="Link to this heading">#</a></h2>
-<p>The manager maintains a running sum and a step counter for each
-environment. On every call to <code class="docutils literal notranslate"><span class="pre">compute()</span></code>:</p>
-<ol class="arabic simple">
-<li><p>The step counter increments for all environments.</p></li>
-<li><p>Each term function is called with the current environment state.</p></li>
-<li><p>The returned per-environment values are added to the running sums.</p></li>
-</ol>
-<p>When an environment resets, the manager reduces each term’s accumulated
-values to a scalar, averages the result across all resetting environments,
-and returns it under the key <code class="docutils literal notranslate"><span class="pre">Episode_Metrics/&lt;term_name&gt;</span></code>. The sums and
-counters are then zeroed for the reset environments.</p>
-<p>The reduction is controlled by the <code class="docutils literal notranslate"><span class="pre">reduce</span></code> field on <code class="docutils literal notranslate"><span class="pre">MetricsTermCfg</span></code>:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">&quot;mean&quot;</span></code> (default): divides the accumulated sum by the step count for
-each environment. Division is per-environment, so environments that
-terminated early are not diluted by longer-running ones.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">&quot;last&quot;</span></code>: reports the value from the final step of the episode. This is
-useful for binary success metrics (such as whether the robot is standing)
-that should not be averaged over time.</p></li>
-</ul>
-<p>These scalars flow through <code class="docutils literal notranslate"><span class="pre">env.extras[&quot;log&quot;]</span></code> into the training runner,
-which writes them to the configured logger. In a typical training run they
-appear as:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Episode_Metrics/base_height
-Episode_Metrics/contact_force
-</pre></div>
+<p>Multiple terms can be registered under different keys and run together.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code class="docutils literal notranslate"><span class="pre">func</span></code> must be a <a class="reference internal" href="api/managers.html#mjlab.managers.RecorderTerm" title="mjlab.managers.RecorderTerm"><code class="xref py py-class docutils literal notranslate"><span class="pre">RecorderTerm</span></code></a> subclass.
+Function-based terms are not supported because recorder terms are
+stateful.</p>
 </div>
-<p>alongside the <code class="docutils literal notranslate"><span class="pre">Episode_Reward/</span></code> entries produced by the reward manager.</p>
-</section>
-<section id="writing-custom-metric-functions">
-<h2>Writing custom metric functions<a class="headerlink" href="#writing-custom-metric-functions" title="Link to this heading">#</a></h2>
-<p>A metric function follows the same pattern as reward and observation
-functions. It takes the environment as its first argument, reads whatever
-state it needs, and returns a <code class="docutils literal notranslate"><span class="pre">[num_envs]</span></code> tensor.</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.envs</span><span class="w"> </span><span class="kn">import</span> <span class="n">ManagerBasedRlEnv</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.managers.scene_entity_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">SceneEntityCfg</span>
-
-<span class="k">def</span><span class="w"> </span><span class="nf">base_height</span><span class="p">(</span>
-    <span class="n">env</span><span class="p">:</span> <span class="n">ManagerBasedRlEnv</span><span class="p">,</span>
-    <span class="n">asset_cfg</span><span class="p">:</span> <span class="n">SceneEntityCfg</span> <span class="o">=</span> <span class="n">SceneEntityCfg</span><span class="p">(</span><span class="s2">&quot;robot&quot;</span><span class="p">),</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
-    <span class="n">robot</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">scene</span><span class="p">[</span><span class="n">asset_cfg</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
-    <span class="k">return</span> <span class="n">robot</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">root_link_pos_w</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">]</span>
-</pre></div>
-</div>
-<p>For metrics that require cached setup or per-episode state, implement the
-term as a class with <code class="docutils literal notranslate"><span class="pre">__init__(self,</span> <span class="pre">cfg,</span> <span class="pre">env)</span></code> and a <code class="docutils literal notranslate"><span class="pre">__call__</span></code>
-method. If the class defines a <code class="docutils literal notranslate"><span class="pre">reset(env_ids)</span></code> method, the manager
-calls it automatically on episode resets.</p>
 </section>
 </section>
 
@@ -576,20 +596,20 @@ calls it automatically on episode resets.</p>
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="curriculum.html"
+       href="metrics.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Curriculum</p>
+        <p class="prev-next-title">Metrics</p>
       </div>
     </a>
     <a class="right-next"
-       href="recorders.html"
+       href="training/rsl_rl.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Recorders</p>
+        <p class="prev-next-title">Training with RSL-RL</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -609,9 +629,9 @@ calls it automatically on episode resets.</p>
   </div>
   <nav class="bd-toc-nav page-toc">
     <ul class="visible nav section-nav flex-column">
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#lifecycle-hooks">Lifecycle hooks</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#writing-a-recorder-term">Writing a recorder term</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#registration">Registration</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-metrics-are-computed">How metrics are computed</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#writing-custom-metric-functions">Writing custom metric functions</a></li>
 </ul>
   </nav></div>
 

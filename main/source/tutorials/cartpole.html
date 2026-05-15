@@ -61,7 +61,7 @@
     <link rel="prev" title="Tutorials" href="../tutorials.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="Mar 13, 2026"/>
+    <meta name="docbuild:last-update" content="May 15, 2026"/>
   </head>
   
   
@@ -191,6 +191,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../architecture_overview.html">Architecture Overview</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../entity/index.html">Entity</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../entity/entity_data.html">Entity Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../entity/per_world_mesh.html">Heterogeneous Worlds</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../actuators.html">Actuators</a></li>
@@ -214,6 +215,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../randomization.html">Domain Randomization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../curriculum.html">Curriculum</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../recorders.html">Recorders</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Training &amp; Debugging</span></p>
 <ul class="nav bd-sidenav">
@@ -533,12 +535,14 @@ mjlab environment is made of small, composable pieces. We will define
 each piece, then assemble them into a complete config at the end.</p>
 <section id="entity-wrapping-the-xml">
 <h3>Entity: wrapping the XML<a class="headerlink" href="#entity-wrapping-the-xml" title="Link to this heading">#</a></h3>
-<p>An entity is mjlab’s representation of a simulated object. It loads a
-MuJoCo XML, attaches actuators to it, and exposes simulation data (joint
-positions, velocities, etc.) as batched PyTorch tensors that your
-observation and reward functions read from.</p>
-<p>To create one we need three things: a function that loads the XML, an
-actuator configuration, and an initial state.</p>
+<p>An entity is a simulated object in the scene. It can be anything from a
+static table to an articulated robot. The <code class="docutils literal notranslate"><span class="pre">EntityCfg</span></code> wraps a MuJoCo
+XML and, optionally, actuator and initial state configurations. At
+runtime, the entity exposes simulation data (joint positions, velocities,
+etc.) as batched PyTorch tensors.</p>
+<p>The cartpole is an articulated entity with one actuator, so we need a
+function that loads the XML, an actuator configuration, and an initial
+state.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load the XML.</span>
 <span class="n">_CARTPOLE_XML</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">&quot;cartpole.xml&quot;</span>
 
@@ -547,21 +551,36 @@ actuator configuration, and an initial state.</p>
 
 <span class="c1"># Tell mjlab to use the motor defined in the XML as is.</span>
 <span class="n">_CARTPOLE_ARTICULATION</span> <span class="o">=</span> <span class="n">EntityArticulationInfoCfg</span><span class="p">(</span>
-    <span class="n">actuators</span><span class="o">=</span><span class="p">(</span><span class="n">XmlMotorActuatorCfg</span><span class="p">(</span><span class="n">target_names_expr</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;slider&quot;</span><span class="p">,)),),</span>
+    <span class="n">actuators</span><span class="o">=</span><span class="p">(</span><span class="n">XmlActuatorCfg</span><span class="p">(</span><span class="n">target_names_expr</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;slider&quot;</span><span class="p">,)),),</span>
 <span class="p">)</span>
-
-<span class="c1"># Initial joint states. For swingup the pole starts pointing down</span>
-<span class="c1"># (hinge = pi). For balance it starts upright (hinge = 0).</span>
-<span class="n">_BALANCE_INIT</span> <span class="o">=</span> <span class="n">EntityCfg</span><span class="o">.</span><span class="n">InitialStateCfg</span><span class="p">(</span>
-    <span class="n">joint_pos</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;slider&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">&quot;hinge_1&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">},</span>
-    <span class="n">joint_vel</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;.*&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">},</span>
-<span class="p">)</span>
-
-<span class="n">_SWINGUP_INIT</span> <span class="o">=</span> <span class="n">EntityCfg</span><span class="o">.</span><span class="n">InitialStateCfg</span><span class="p">(</span>
+</pre></div>
+</div>
+<p>The initial joint state depends on the task variant:</p>
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-0">
+Swingup</label><div class="sd-tab-content docutils">
+<p>The pole starts pointing down (<code class="docutils literal notranslate"><span class="pre">hinge</span> <span class="pre">=</span> <span class="pre">pi</span></code>). The agent must swing
+it up and balance it.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">_SWINGUP_INIT</span> <span class="o">=</span> <span class="n">EntityCfg</span><span class="o">.</span><span class="n">InitialStateCfg</span><span class="p">(</span>
     <span class="n">joint_pos</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;slider&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">&quot;hinge_1&quot;</span><span class="p">:</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span><span class="p">},</span>
     <span class="n">joint_vel</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;.*&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">},</span>
 <span class="p">)</span>
 </pre></div>
+</div>
+</div>
+<input id="sd-tab-item-1" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-1">
+Balance</label><div class="sd-tab-content docutils">
+<p>The pole starts upright (<code class="docutils literal notranslate"><span class="pre">hinge</span> <span class="pre">=</span> <span class="pre">0</span></code>). The agent only needs to
+keep it balanced.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">_BALANCE_INIT</span> <span class="o">=</span> <span class="n">EntityCfg</span><span class="o">.</span><span class="n">InitialStateCfg</span><span class="p">(</span>
+    <span class="n">joint_pos</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;slider&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">,</span> <span class="s2">&quot;hinge_1&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">},</span>
+    <span class="n">joint_vel</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;.*&quot;</span><span class="p">:</span> <span class="mf">0.0</span><span class="p">},</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
 </div>
 <p>Now we can snap these together into an <code class="docutils literal notranslate"><span class="pre">EntityCfg</span></code>:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Bundle the spec loader, actuator, and initial state into one config.</span>
@@ -582,16 +601,8 @@ environment knows what to simulate.</p>
 returns a tensor. The observation manager concatenates them into a single
 vector for the policy. mjlab provides common terms in <code class="docutils literal notranslate"><span class="pre">mjlab.envs.mdp</span></code>
 (joint positions, velocities, etc.), but you can always define your own.</p>
-<p>For cartpole we need to ask: what does the agent need to know to act
-well? The cartpole has two moving parts (the cart and the pole), so its
-physical state is fully described by two positions and two velocities.
-This is the minimal set that makes the problem Markov: given these four
-values, the future trajectory is completely determined by the equations
-of motion for any control input. If you removed any one of them (say
-the pole velocity), the agent could not tell whether the pole is falling
-or recovering, and no policy could reliably act on that.</p>
-<p>In dm_control’s terminology, this makes the task <em>strongly observable</em>:
-the full state can be recovered from a single observation.</p>
+<p>The cartpole has two moving parts, so its physical state is fully
+described by two positions and two velocities:</p>
 <div class="pst-scrollable-table-container"><table class="table">
 <colgroup>
 <col style="width: 22.0%" />
@@ -624,40 +635,63 @@ the full state can be recovered from a single observation.</p>
 </tbody>
 </table>
 </div>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
 <p>The pole angle is encoded as cosine and sine rather than a raw angle.
-MuJoCo’s unlimited hinge does not wrap the angle, so as the pole spins
-the raw value keeps growing. Cosine and sine give the same output for
-the same physical angle regardless of how many rotations have occurred.
-This is the one custom observation function:</p>
+MuJoCo’s unlimited hinge does not wrap the angle, so as the pole
+spins the raw value keeps growing. Cosine and sine give the same
+output for the same physical angle regardless of how many rotations
+have occurred.</p>
+</div>
+<p>This is the one custom observation function:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">pole_angle_cos_sin</span><span class="p">(</span><span class="n">env</span><span class="p">,</span> <span class="n">asset_cfg</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
     <span class="n">asset</span><span class="p">:</span> <span class="n">Entity</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">scene</span><span class="p">[</span><span class="n">asset_cfg</span><span class="o">.</span><span class="n">name</span><span class="p">]</span>
-    <span class="c1"># joint_pos has shape [num_envs, num_joints]. Unlike vanilla</span>
-    <span class="c1"># MuJoCo where data is for a single world, all data in mjlab is</span>
-    <span class="c1"># batched along the first dimension because many environments</span>
-    <span class="c1"># run in parallel. Every function you write should accept and</span>
-    <span class="c1"># return tensors with this leading batch dimension.</span>
     <span class="n">angle</span> <span class="o">=</span> <span class="n">asset</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">joint_pos</span><span class="p">[:,</span> <span class="n">asset_cfg</span><span class="o">.</span><span class="n">joint_ids</span><span class="p">]</span>
     <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">([</span><span class="n">torch</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">angle</span><span class="p">),</span> <span class="n">torch</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">angle</span><span class="p">)],</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>To wire these up, we create <code class="docutils literal notranslate"><span class="pre">ObservationTermCfg</span></code> entries and group them.
-<code class="docutils literal notranslate"><span class="pre">SceneEntityCfg</span></code> scopes each function to specific joints on the entity:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Point at the joints we care about.</span>
-<span class="n">cart_cfg</span> <span class="o">=</span> <span class="n">SceneEntityCfg</span><span class="p">(</span><span class="s2">&quot;cartpole&quot;</span><span class="p">,</span> <span class="n">joint_names</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;slider&quot;</span><span class="p">,))</span>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>All data in mjlab is batched: tensors have shape
+<code class="docutils literal notranslate"><span class="pre">[num_envs,</span> <span class="pre">...]</span></code> because many environments run in parallel.
+Every function you write should accept and return tensors with this
+leading batch dimension.</p>
+</div>
+<p>To wire these up, we create <code class="docutils literal notranslate"><span class="pre">ObservationTermCfg</span></code> entries and group
+them. <code class="docutils literal notranslate"><span class="pre">SceneEntityCfg</span></code> scopes each function to specific joints on
+the entity:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">cart_cfg</span> <span class="o">=</span> <span class="n">SceneEntityCfg</span><span class="p">(</span><span class="s2">&quot;cartpole&quot;</span><span class="p">,</span> <span class="n">joint_names</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;slider&quot;</span><span class="p">,))</span>
 <span class="n">hinge_cfg</span> <span class="o">=</span> <span class="n">SceneEntityCfg</span><span class="p">(</span><span class="s2">&quot;cartpole&quot;</span><span class="p">,</span> <span class="n">joint_names</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;hinge_1&quot;</span><span class="p">,))</span>
 
-<span class="c1"># Each term is a function + the params to call it with.</span>
-<span class="n">actor_terms</span> <span class="o">=</span> <span class="p">{</span>
-    <span class="s2">&quot;cart_pos&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">joint_pos_rel</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;asset_cfg&quot;</span><span class="p">:</span> <span class="n">cart_cfg</span><span class="p">}),</span>
-    <span class="s2">&quot;pole_angle&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">pole_angle_cos_sin</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;asset_cfg&quot;</span><span class="p">:</span> <span class="n">hinge_cfg</span><span class="p">}),</span>
-    <span class="s2">&quot;cart_vel&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">joint_vel_rel</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;asset_cfg&quot;</span><span class="p">:</span> <span class="n">cart_cfg</span><span class="p">}),</span>
-    <span class="s2">&quot;pole_vel&quot;</span><span class="p">:</span> <span class="n">ObservationTermCfg</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">joint_vel_rel</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;asset_cfg&quot;</span><span class="p">:</span> <span class="n">hinge_cfg</span><span class="p">}),</span>
+<span class="n">cart_pos</span> <span class="o">=</span> <span class="n">ObservationTermCfg</span><span class="p">(</span>
+    <span class="n">func</span><span class="o">=</span><span class="n">joint_pos_rel</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;asset_cfg&quot;</span><span class="p">:</span> <span class="n">cart_cfg</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="n">pole_angle</span> <span class="o">=</span> <span class="n">ObservationTermCfg</span><span class="p">(</span>
+    <span class="n">func</span><span class="o">=</span><span class="n">pole_angle_cos_sin</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;asset_cfg&quot;</span><span class="p">:</span> <span class="n">hinge_cfg</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="n">cart_vel</span> <span class="o">=</span> <span class="n">ObservationTermCfg</span><span class="p">(</span>
+    <span class="n">func</span><span class="o">=</span><span class="n">joint_vel_rel</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;asset_cfg&quot;</span><span class="p">:</span> <span class="n">cart_cfg</span><span class="p">},</span>
+<span class="p">)</span>
+<span class="n">pole_vel</span> <span class="o">=</span> <span class="n">ObservationTermCfg</span><span class="p">(</span>
+    <span class="n">func</span><span class="o">=</span><span class="n">joint_vel_rel</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;asset_cfg&quot;</span><span class="p">:</span> <span class="n">hinge_cfg</span><span class="p">},</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Each term pairs a function with the parameters to call it with. Now
+we group them. The RL algorithm expects an <code class="docutils literal notranslate"><span class="pre">&quot;actor&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;critic&quot;</span></code>
+group; they share the same terms here, but when you add noise later
+you can give the critic clean observations
+(asymmetric actor-critic <label for='sidenote-role-1' class='margin-toggle'><span id="id1">
+<sup>1</sup></span>
+
+</label><input type='checkbox' id='sidenote-role-1' name='sidenote-role-1' class='margin-toggle'><span class="sidenote"><sup>1</sup>Pinto, L., Andrychowicz, M., Welinder, P., Zaremba, W., &amp; Abbeel, P. (2018). <a class="reference external" href="https://www.roboticsproceedings.org/rss14/p08.pdf">Asymmetric Actor Critic for Image-Based Robot Learning</a>. <em>Robotics: Science and Systems XIV</em>.</span>).</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">actor_terms</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;cart_pos&quot;</span><span class="p">:</span> <span class="n">cart_pos</span><span class="p">,</span>
+    <span class="s2">&quot;pole_angle&quot;</span><span class="p">:</span> <span class="n">pole_angle</span><span class="p">,</span>
+    <span class="s2">&quot;cart_vel&quot;</span><span class="p">:</span> <span class="n">cart_vel</span><span class="p">,</span>
+    <span class="s2">&quot;pole_vel&quot;</span><span class="p">:</span> <span class="n">pole_vel</span><span class="p">,</span>
 <span class="p">}</span>
 
-<span class="c1"># The RL algorithm expects both an &quot;actor&quot; and &quot;critic&quot; group.</span>
-<span class="c1"># They see the same observations here; when you add noise later,</span>
-<span class="c1"># you can give the critic clean observations for better value</span>
-<span class="c1"># estimates (asymmetric actor-critic).</span>
 <span class="n">observations</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;actor&quot;</span><span class="p">:</span> <span class="n">ObservationGroupCfg</span><span class="p">(</span><span class="n">actor_terms</span><span class="p">),</span>
     <span class="s2">&quot;critic&quot;</span><span class="p">:</span> <span class="n">ObservationGroupCfg</span><span class="p">({</span><span class="o">**</span><span class="n">actor_terms</span><span class="p">}),</span>
@@ -669,7 +703,7 @@ This is the one custom observation function:</p>
 <h3>Actions: what the agent does<a class="headerlink" href="#actions-what-the-agent-does" title="Link to this heading">#</a></h3>
 <p>The agent outputs a single scalar: the force on the cart.
 <code class="docutils literal notranslate"><span class="pre">JointEffortActionCfg</span></code> writes the policy output to the actuator’s
-effort target. The <code class="docutils literal notranslate"><span class="pre">XmlMotorActuator</span></code> passes it to MuJoCo’s <code class="docutils literal notranslate"><span class="pre">ctrl</span></code>
+effort target. The <code class="docutils literal notranslate"><span class="pre">XmlActuator</span></code> passes it to MuJoCo’s <code class="docutils literal notranslate"><span class="pre">ctrl</span></code>
 buffer, which clamps it to [-1, 1] and multiplies by the gear ratio:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">actions</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;effort&quot;</span><span class="p">:</span> <span class="n">JointEffortActionCfg</span><span class="p">(</span>
@@ -680,9 +714,6 @@ buffer, which clamps it to [-1, 1] and multiplies by the gear ratio:</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>The policy samples from an unbounded Gaussian, so it can output values
-outside [-1, 1]. MuJoCo handles the clamping, and the log probability is
-computed on the unclamped value so gradients stay correct.</p>
 </section>
 <section id="rewards-the-training-signal">
 <h3>Rewards: the training signal<a class="headerlink" href="#rewards-the-training-signal" title="Link to this heading">#</a></h3>
@@ -696,14 +727,8 @@ multiplicative term:</p>
     \times \underbrace{\frac{4 + q(u)}{5}}_{\text{small control}}
     \times \underbrace{\frac{1 + g(\dot\theta)}{2}}_{\text{small velocity}}\]</div>
 <p>Each factor is between 0 and 1. The product is high only when all four
-conditions hold simultaneously. A weighted sum would let the agent trade
-off one factor against another; the product prevents that.</p>
-<p>The offsets (1, 1, 4, 1) control how forgiving each factor is. The
-upright term can drop all the way to 0 when the pole is down, making it
-the dominant signal. The small_control term bottoms out at 4/5 = 0.8
-even at maximum force, so the agent is not afraid to push hard when it
-needs to (important for swingup). The centered and small_velocity terms
-sit in between, bottoming out at 0.5.</p>
+conditions hold simultaneously, preventing the agent from trading off
+one factor against another.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rewards</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;smooth_reward&quot;</span><span class="p">:</span> <span class="n">RewardTermCfg</span><span class="p">(</span>
         <span class="n">func</span><span class="o">=</span><span class="n">cartpole_smooth_reward</span><span class="p">,</span>
@@ -716,14 +741,10 @@ sit in between, bottoming out at 0.5.</p>
 </section>
 <section id="terminations-when-to-stop">
 <h3>Terminations: when to stop<a class="headerlink" href="#terminations-when-to-stop" title="Link to this heading">#</a></h3>
-<p>The dm_control Control Suite formulates its tasks as infinite-horizon:
-there are no terminal states, and the discount is always 1. The
-1000 step episodes are just a practical evaluation window, not a real
-boundary. The agent should behave as if the episode could continue
-forever.</p>
-<p>We express this with a time limit termination and <code class="docutils literal notranslate"><span class="pre">time_out=True</span></code>,
-which tells the RL algorithm to bootstrap the value function rather
-than treating the end of the episode as a true terminal state:</p>
+<p>The cartpole has no failure states, so the only termination is a time
+limit. Setting <code class="docutils literal notranslate"><span class="pre">time_out=True</span></code> tells the RL algorithm this is a
+truncation, not a true terminal state, so it bootstraps the value
+function past the episode boundary:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">terminations</span> <span class="o">=</span> <span class="p">{</span>
     <span class="s2">&quot;time_out&quot;</span><span class="p">:</span> <span class="n">TerminationTermCfg</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">time_out</span><span class="p">,</span> <span class="n">time_out</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
 <span class="p">}</span>
@@ -806,7 +827,7 @@ config is in <code class="docutils literal notranslate"><span class="pre">cartpo
 </pre></div>
 </div>
 <p>Train:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>train<span class="w"> </span>Mjlab-Cartpole-Swingup<span class="w"> </span>--num-envs<span class="w"> </span><span class="m">4096</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>train<span class="w"> </span>Mjlab-Cartpole-Swingup<span class="w"> </span>--env.scene.num-envs<span class="w"> </span><span class="m">4096</span>
 </pre></div>
 </div>
 <p>Play back a trained checkpoint, either from a local file or a W&amp;B run:</p>
@@ -814,11 +835,11 @@ config is in <code class="docutils literal notranslate"><span class="pre">cartpo
 uv<span class="w"> </span>run<span class="w"> </span>play<span class="w"> </span>Mjlab-Cartpole-Swingup<span class="w"> </span>--wandb-run-path<span class="w"> </span>&lt;user/project/run_id&gt;
 </pre></div>
 </div>
-<figure class="align-center" id="id1">
+<figure class="align-center" id="id2">
 <a class="reference internal image-reference" href="../../_images/cartpole_training_curve.png"><img alt="Cartpole swingup training curve" src="../../_images/cartpole_training_curve.png" style="width: 70%;" />
 </a>
 <figcaption>
-<p><span class="caption-text">Mean reward over 5 seeds (shaded: one standard deviation).</span><a class="headerlink" href="#id1" title="Link to this image">#</a></p>
+<p><span class="caption-text">Mean reward over 5 seeds (shaded: one standard deviation).</span><a class="headerlink" href="#id2" title="Link to this image">#</a></p>
 </figcaption>
 </figure>
 <p>Config fields can be overridden from the CLI:</p>
@@ -843,20 +864,19 @@ robust policy:</p>
 <span class="p">)</span>
 </pre></div>
 </div>
-<p><strong>Randomize the physics.</strong> Use the <a class="reference internal" href="../randomization.html#domain-randomization"><span class="std std-ref">Domain Randomization</span></a> system to
-vary pole mass or joint damping across environments, training a policy
-that transfers across physical variations.</p>
-<p><strong>Explore other tasks.</strong> The library ships with locomotion, manipulation,
-and motion tracking tasks that you can run out of the box:
+<p><strong>Randomize the physics.</strong> Use the <a class="reference internal" href="../randomization.html#domain-randomization"><span class="std std-ref">Domain Randomization</span></a> system
+to vary pole mass or joint damping across environments, training a
+policy that transfers across physical variations.</p>
+<p><strong>Explore other tasks.</strong> The library ships with locomotion,
+manipulation, and motion tracking tasks you can run out of the box:
 <code class="docutils literal notranslate"><span class="pre">Mjlab-Velocity-Flat-Unitree-Go1</span></code>, <code class="docutils literal notranslate"><span class="pre">Mjlab-Lift-Cube-Yam</span></code>, and
 <code class="docutils literal notranslate"><span class="pre">Mjlab-Tracking-Flat-Unitree-G1</span></code>, among others. Reading their source
-is a good way to see how more complex reward and observation structures
-are composed.</p>
-<p><strong>Build something new.</strong> The cartpole is intentionally minimal. Once you
-are comfortable with the pieces, try designing your own robot model and
-task from scratch. The same pattern of XML model, observation terms,
-reward terms, and config applies regardless of how complex the system
-becomes.</p>
+shows how more complex observation and reward structures are composed.</p>
+<p><strong>Build something new.</strong> The cartpole is intentionally minimal. Once
+you are comfortable with the pieces, try designing your own robot model
+and task from scratch. The same pattern applies regardless of how
+complex the system becomes.</p>
+<p class="rubric">References</p>
 </section>
 </section>
 
@@ -951,7 +971,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on Mar 13, 2026.
+  Last updated on May 15, 2026.
   <br/>
 </p>
   </div>

@@ -56,7 +56,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="Mar 13, 2026"/>
+    <meta name="docbuild:last-update" content="May 15, 2026"/>
   </head>
   
   
@@ -188,6 +188,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../source/architecture_overview.html">Architecture Overview</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../source/entity/index.html">Entity</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../source/entity/entity_data.html">Entity Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/entity/per_world_mesh.html">Heterogeneous Worlds</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../source/actuators.html">Actuators</a></li>
@@ -211,6 +212,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../source/randomization.html">Domain Randomization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../source/curriculum.html">Curriculum</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../source/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../source/recorders.html">Recorders</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Training &amp; Debugging</span></p>
 <ul class="nav bd-sidenav">
@@ -1600,11 +1602,11 @@ document.write(`
 
     <span class="c1"># Increase distance between stones with difficulty.</span>
     <span class="n">d_low</span><span class="p">,</span> <span class="n">d_high</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stone_distance_range</span>
-    <span class="n">avg_distance</span> <span class="o">=</span> <span class="p">(</span><span class="n">d_low</span> <span class="o">+</span> <span class="n">d_high</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">difficulty</span> <span class="o">*</span> <span class="p">(</span><span class="n">d_high</span> <span class="o">-</span> <span class="n">d_low</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">avg_distance</span> <span class="o">=</span> <span class="n">d_low</span> <span class="o">+</span> <span class="n">difficulty</span> <span class="o">*</span> <span class="p">(</span><span class="n">d_high</span> <span class="o">-</span> <span class="n">d_low</span><span class="p">)</span>
 
     <span class="c1"># Decrease stone size with difficulty (larger stones are easier).</span>
     <span class="n">s_min</span><span class="p">,</span> <span class="n">s_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stone_size_range</span>
-    <span class="n">avg_stone_size</span> <span class="o">=</span> <span class="p">(</span><span class="n">s_min</span> <span class="o">+</span> <span class="n">s_max</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">-</span> <span class="n">difficulty</span> <span class="o">*</span> <span class="p">(</span><span class="n">s_max</span> <span class="o">-</span> <span class="n">s_min</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">avg_stone_size</span> <span class="o">=</span> <span class="n">s_max</span> <span class="o">-</span> <span class="n">difficulty</span> <span class="o">*</span> <span class="p">(</span><span class="n">s_max</span> <span class="o">-</span> <span class="n">s_min</span><span class="p">)</span>
     <span class="n">spacing</span> <span class="o">=</span> <span class="n">avg_stone_size</span> <span class="o">+</span> <span class="n">avg_distance</span>
 
     <span class="c1"># Aggressive grid density to reach borders.</span>
@@ -2183,7 +2185,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on Mar 13, 2026.
+  Last updated on May 15, 2026.
   <br/>
 </p>
   </div>

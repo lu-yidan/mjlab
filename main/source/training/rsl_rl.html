@@ -56,10 +56,10 @@
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
     <link rel="next" title="Motion Imitation" href="motion_imitation.html" />
-    <link rel="prev" title="Metrics" href="../metrics.html" />
+    <link rel="prev" title="Recorders" href="../recorders.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="Mar 13, 2026"/>
+    <meta name="docbuild:last-update" content="May 15, 2026"/>
   </head>
   
   
@@ -189,6 +189,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../architecture_overview.html">Architecture Overview</a></li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../entity/index.html">Entity</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../entity/entity_data.html">Entity Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../entity/per_world_mesh.html">Heterogeneous Worlds</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../actuators.html">Actuators</a></li>
@@ -212,6 +213,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../randomization.html">Domain Randomization</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../curriculum.html">Curriculum</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../recorders.html">Recorders</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Training &amp; Debugging</span></p>
 <ul class="current nav bd-sidenav">
@@ -685,6 +687,10 @@ config to disable uploads while keeping metric logging.</p>
 <code class="docutils literal notranslate"><span class="pre">logs/rsl_rl/{experiment_name}/</span></code> and loads the highest-numbered checkpoint.
 Narrow the search with <code class="docutils literal notranslate"><span class="pre">--agent.load-run</span></code> (regex on directory names) and
 <code class="docutils literal notranslate"><span class="pre">--agent.load-checkpoint</span></code> (regex on checkpoint filenames).</p>
+<p><code class="docutils literal notranslate"><span class="pre">--agent.max-iterations</span></code> controls how many <em>additional</em> iterations to run
+from the checkpoint. If you are resuming from iteration 11500 with
+<code class="docutils literal notranslate"><span class="pre">--agent.max-iterations</span> <span class="pre">300</span></code> (the default), training will run iterations
+11500 through 11800. Set this to the number of new iterations you want.</p>
 <p>To resume from a W&amp;B run:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>train<span class="w"> </span>Mjlab-Velocity-Flat-Unitree-G1<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--num-envs<span class="w"> </span><span class="m">4096</span><span class="w"> </span><span class="se">\</span>
@@ -724,12 +730,12 @@ Narrow the search with <code class="docutils literal notranslate"><span class="p
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../metrics.html"
+       href="../recorders.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Metrics</p>
+        <p class="prev-next-title">Recorders</p>
       </div>
     </a>
     <a class="right-next"
@@ -796,7 +802,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on Mar 13, 2026.
+  Last updated on May 15, 2026.
   <br/>
 </p>
   </div>
