@@ -77,6 +77,8 @@ Table of Contents
    :caption: Training & Debugging
 
    source/training/rsl_rl
+   source/g1_recovery_workflow
+   source/g1_recovery_migration
    source/training/motion_tracking
    source/viewers
    source/training/distributed_training
