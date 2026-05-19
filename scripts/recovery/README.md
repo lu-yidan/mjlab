@@ -53,3 +53,5 @@ MJLAB_LOAD_RUN=2026-04-15_11-07-35_late_phase_polish_full_v1 \
 ```
 
 完整流程、奖励说明与下一步优化见：[G1 Recovery 工作流文档](../../docs/source/g1_recovery_workflow.md)。
+
+**动作裁剪与可视化**（文件名 `1060_1150` 含义、`amp_rec` 裁剪、`play_recovery_motion` 预览）见文档 **第 9 节**。

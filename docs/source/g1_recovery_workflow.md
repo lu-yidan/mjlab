@@ -243,9 +243,167 @@ flowchart LR
 
 当前 mjlab recovery **仍是 PPO + shaping**，不是 AMP；风格问题优先用 **late-phase + 接触惩罚** 解决，不够再开 AMP 子项目。
 
-## 9. 相关链接
+## 9. 动作片段：如何裁剪、转换与可视化
+
+`artifacts/recovery_motions/g1_amp_get_up/` 里的数据是 **两阶段** 得到的：
+
+1. **时间裁剪**（在 `amp_rec`）：从长动作里切出 `[start, end)` 帧，保存为 `.pkl`
+2. **格式转换**（在 `mjlab`）：`.pkl` → `.npz`，并重排关节顺序（**不再裁剪**）
+
+### 9.1 文件名含义
+
+示例：`fallAndGetUp1_subject1_1060_1150.npz`
+
+| 部分 | 含义 |
+|------|------|
+| `fallAndGetUp1` | 原始动作序列名 |
+| `subject1` | 受试者 / 片段 ID |
+| `1060` | 裁剪起始帧（含） |
+| `1150` | 裁剪结束帧（不含，Python 切片语义） |
+
+帧数 = `1150 - 1060 = 90`，与 npz 里 `joint_pos.shape[0]` 一致。
+
+当前目录约 24 条 clip，与 `amp_rec` 中
+`source/legged_lab/legged_lab/data/MotionData/g1_29dof/amp/get_up/` 一一对应。
+
+### 9.2 如何裁剪片段（amp_rec，需 Isaac Lab 环境）
+
+mjlab **没有** 时间裁剪脚本；裁剪在 `amp_rec` 用 `single_retarget.py` 完成。
+
+核心逻辑在 `amp_rec/scripts/tools/retarget/gmr_to_lab.py` 的 `extract_gmr_data()`：
+
+```python
+root_pos[start_frame:end_frame]
+dof_pos[start_frame:end_frame]
+```
+
+**单条片段导出示例**（需先有一份较长的 GMR `.pkl` 源文件）：
+
+```bash
+cd /path/to/amp_rec
+
+python scripts/tools/retarget/single_retarget.py \
+  --robot g1 \
+  --input_file /path/to/long_motion/fallAndGetUp1_subject1.pkl \
+  --output_file source/legged_lab/legged_lab/data/MotionData/g1_29dof/amp/get_up/fallAndGetUp1_subject1_1060_1150.pkl \
+  --config_file scripts/tools/retarget/config/g1_29dof.yaml \
+  --frame_range 1060 1150 \
+  --loop clamp \
+  --headless
+```
+
+说明：
+
+- `--frame_range START END`：`[START, END)`，与文件名中的两个数字一致
+- 输出 `.pkl` 已是 **lab 关节顺序** + 带 `key_body_pos` 的 legged_lab 格式
+- `dataset_retarget.py` 只做**整段**批量转换，**不支持** `--frame_range`
+
+片段列表与 AMP 采样权重见
+`amp_rec/.../g1_amp_get_up_env_cfg.py` 的 `motion_data_weights`（约 24 条）。
+
+### 9.3 如何转换到 mjlab（pkl → npz）
+
+在 mjlab 仓库根目录：
+
+```bash
+cd /path/to/mjlab
+
+uv run python -m mjlab.scripts.amp_pkl_to_npz \
+  --input /path/to/amp_rec/source/legged_lab/legged_lab/data/MotionData/g1_29dof/amp/get_up \
+  --output artifacts/recovery_motions/g1_amp_get_up
+```
+
+脚本：`src/mjlab/scripts/amp_pkl_to_npz.py`
+
+- 读取每个 `.pkl` 的**全部帧**（文件本身已是裁剪后的短 clip）
+- 将 `dof_pos` 从 amp_rec `lab_dof_names` 重排到 mjlab G1 顺序
+- 若缺少速度字段，用差分补 `root_lin_vel` / `joint_vel`
+- 输出字段：`fps`, `root_pos`, `root_quat`, `root_lin_vel`, `root_ang_vel`, `joint_pos`, `joint_vel`, `joint_names`
+
+### 9.4 如何可视化裁剪后的片段
+
+#### A. 播放整条 teacher 动作（推荐第一步）
+
+脚本：`src/mjlab/scripts/play_recovery_motion.py`
+
+**GUI 播放指定 clip**：
+
+```bash
+cd /path/to/mjlab
+
+uv run python -m mjlab.scripts.play_recovery_motion \
+  --motion-path artifacts/recovery_motions/g1_amp_get_up \
+  --clip fallAndGetUp2_subject2_1200_1370
+```
+
+**无头冒烟**（不弹窗，跑 120 帧）：
+
+```bash
+uv run python -m mjlab.scripts.play_recovery_motion \
+  --motion-path artifacts/recovery_motions/g1_amp_get_up \
+  --clip fallAndGetUp2_subject2_1200_1370 \
+  --headless \
+  --max-frames 120
+```
+
+**常用参数**：
+
+| 参数 | 作用 |
+|------|------|
+| `--motion-path` | 目录或单个 `.npz` |
+| `--clip` | 片段名（可带或不带 `.npz` 后缀） |
+| `--headless` | 不打开 MuJoCo viewer |
+| `--max-frames N` | 最多播放 N 帧后退出 |
+| `--no-loop` | 播完一遍就停 |
+| `--fps` | 覆盖播放帧率 |
+
+#### B. 预览 fallen reset 姿态（训练用 reset 分布）
+
+脚本：`src/mjlab/scripts.preview_recovery_fallen_poses`
+
+用于检查 **训练 reset** 采样的倒地姿态是否合理（不是播完整起身轨迹）：
+
+```bash
+uv run python -m mjlab.scripts.preview_recovery_fallen_poses \
+  --motion-path artifacts/recovery_motions/g1_amp_get_up \
+  --progress-max 0.08 \
+  --settle-steps 10 \
+  --num-samples 3
+```
+
+`--progress-max 0.08` 对应训练里 `motion_fallen_progress_range` 的前 8% 片段。
+
+更完整的 play / reset 示例见 {doc}`g1_recovery_migration` 的 “How To Play Converted Motions” 一节。
+
+#### C. 训练时片段内部的“逻辑裁剪”
+
+即使 npz 只有 ~90 帧，recovery 训练还会在 clip **内部** 按 progress 再采样：
+
+| 用途 | 配置项 | 默认范围 |
+|------|--------|----------|
+| teacher reset | `teacher.min_progress` / `max_progress` | 8% – 60% |
+| fallen reset | `motion_fallen_progress_range` | 0% – 8% |
+
+这不是文件级裁剪，而是 `RecoveryMotionLoader` 在已有短 clip 上取子区间。
+
+### 9.5 端到端流程小结
+
+```text
+长 GMR .pkl
+    │  amp_rec: single_retarget.py --frame_range START END
+    ▼
+短片段 .pkl  (文件名含 START_END)
+    │  mjlab: amp_pkl_to_npz.py
+    ▼
+.npz in artifacts/recovery_motions/g1_amp_get_up/
+    │  mjlab: play_recovery_motion.py  (检查动作是否合理)
+    ▼
+训练: --env.teacher.motion-path .../g1_amp_get_up
+```
+
+## 10. 相关链接
 
 - 脚本：`scripts/recovery/README.md`
-- 迁移笔记：{doc}`g1_recovery_migration`
+- 迁移笔记：{doc}`g1_recovery_migration`（含更多 `play_recovery_motion` / `preview_recovery_fallen_poses` 示例）
 - 转换动作：`uv run python -m mjlab.scripts.amp_pkl_to_npz --help`
 - 预览 teacher 动作：`uv run python -m mjlab.scripts.play_recovery_motion --help`
