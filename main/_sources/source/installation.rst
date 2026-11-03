@@ -14,9 +14,10 @@ choose the one that best fits your use case.
 
     **System Requirements**
 
-    - **Training**: Linux + NVIDIA GPU (CUDA 12.4+ recommended)
+    - **Training**: Linux + NVIDIA GPU (Turing or newer) with driver 580+
+      (or driver 525+ with the ``cu126`` extra, which does not support Blackwell GPUs)
     - **Evaluation**: Linux, macOS, or Windows (WSL)
-    - **Python**: 3.10 or higher
+    - **Python**: 3.11 or higher
 
     See :ref:`faq` for more details on what is exactly supported.
 

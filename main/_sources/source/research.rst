@@ -42,6 +42,11 @@ Papers that use mjlab. To add your work, open a pull request or post in
        Teleoperation <https://arxiv.org/abs/2602.15060>`_
      - Zhu, Cai, Yang, Ren, Xie, Wang, Wu, et al.
      - 2026
+   * - `PAC-MAN: Perception-Aware CBF-RL for Whole-Body Safety in Humanoid
+       Dodgeball <https://arxiv.org/abs/2607.28623>`_
+       (`code <https://github.com/lzyang2000/perceptive_cbf_rl>`_)
+     - Yang, Li, Ames
+     - 2026
 
 Projects
 --------
@@ -68,8 +73,20 @@ Projects built on mjlab. To add yours, open a pull request or post in
    * - `pal-robotics/pal_mjlab <https://github.com/pal-robotics/pal_mjlab>`_
      - PAL Robotics robots and tasks.
    * - `Msornerrrr/in-hand-rotation-mjlab <https://github.com/Msornerrrr/in-hand-rotation-mjlab>`_
-     - Sim to real RL for in hand cube rotation with the LEAP Hand.
+     - In-hand rotation on the LEAP Hand (cube yaw, SO(3) reorientation, fingertip rotation of 22 objects),
+       trained with PPO and SuperMimic-style world-model RL, with sim-to-real deployment.
    * - `project-instinct/InstinctMJ <https://github.com/project-instinct/InstinctMJ>`_
      - mjlab version of Project-Instinct, a whole-body control toolchain to study Instinct-Level intelligence.
    * - `lzyang2000/twist2_mjlab <https://github.com/lzyang2000/twist2_mjlab>`_
      - mjlab port of `TWIST2 <https://arxiv.org/abs/2511.02832>`_.
+   * - `wuji-technology/wuji-mjlab <https://github.com/wuji-technology/wuji-mjlab>`_
+     - In-hand cube reorientation on the Wuji Hand with sim-to-real deployment.
+   * - `wbc-mjlab/wbc-mjlab <https://github.com/wbc-mjlab/wbc-mjlab>`_
+     - Configurable whole-body control — shared MDP with task configs, one policy for many skills.
+   * - `pollen-robotics/microduck_rl <https://github.com/pollen-robotics/microduck_rl>`_
+     - Sim-to-real locomotion for `Microduck <https://pollen-robotics.com/microduck/>`_, an
+       open-source 25 cm bipedal robot from Pollen Robotics and Hugging Face.
+   * - `KingKongRobotics/jumper <https://github.com/KingKongRobotics/jumper>`_
+     - Prompt-driven motion training for Jumper, a 22-DoF crab robot.
+   * - `vssinghh/so101-mjlab <https://github.com/vssinghh/so101-mjlab>`_
+     - Sim to real cube lifting with the SO-ARM101 robot arm.
