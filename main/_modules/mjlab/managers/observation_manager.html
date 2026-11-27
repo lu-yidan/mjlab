@@ -56,7 +56,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="May 15, 2026"/>
+    <meta name="docbuild:last-update" content="Nov 27, 2026"/>
   </head>
   
   
@@ -195,6 +195,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/tactile_sensor.html">Tactile Sensor</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../source/scene.html">Scene</a></li>
@@ -456,7 +457,7 @@ document.write(`
 
   <span class="n">delay_per_env_phase</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;If True and update_period &gt; 0, stagger update timing across envs to avoid</span>
-<span class="sd">  synchronized resampling.&quot;&quot;&quot;</span>
+<span class="sd">  synchronized resampling. Ignored when delay_per_env is False.&quot;&quot;&quot;</span>
 
   <span class="n">history_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Number of past observations to keep in history. 0 = no history.&quot;&quot;&quot;</span>
@@ -564,9 +565,10 @@ document.write(`
     <span class="n">msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;&lt;ObservationManager&gt; contains </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_group_obs_term_names</span><span class="p">)</span><span class="si">}</span><span class="s2"> groups.</span><span class="se">\n</span><span class="s2">&quot;</span>
     <span class="k">for</span> <span class="n">group_name</span><span class="p">,</span> <span class="n">group_dim</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_group_obs_dim</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
       <span class="n">table</span> <span class="o">=</span> <span class="n">PrettyTable</span><span class="p">()</span>
-      <span class="n">table</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Active Observation Terms in Group: &#39;</span><span class="si">{</span><span class="n">group_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
+      <span class="n">title</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Active Observation Terms in Group: &#39;</span><span class="si">{</span><span class="n">group_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span>
       <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_group_obs_concatenate</span><span class="p">[</span><span class="n">group_name</span><span class="p">]:</span>
-        <span class="n">table</span><span class="o">.</span><span class="n">title</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot; (shape: </span><span class="si">{</span><span class="n">group_dim</span><span class="si">}</span><span class="s2">)&quot;</span>  <span class="c1"># type: ignore</span>
+        <span class="n">title</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot; (shape: </span><span class="si">{</span><span class="n">group_dim</span><span class="si">}</span><span class="s2">)&quot;</span>
+      <span class="n">table</span><span class="o">.</span><span class="n">title</span> <span class="o">=</span> <span class="n">title</span>
       <span class="n">table</span><span class="o">.</span><span class="n">field_names</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Index&quot;</span><span class="p">,</span> <span class="s2">&quot;Name&quot;</span><span class="p">,</span> <span class="s2">&quot;Shape&quot;</span><span class="p">]</span>
       <span class="n">table</span><span class="o">.</span><span class="n">align</span><span class="p">[</span><span class="s2">&quot;Name&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;l&quot;</span>
       <span class="n">obs_terms</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span>
@@ -603,7 +605,7 @@ document.write(`
         <span class="n">buffers</span> <span class="o">=</span> <span class="n">obs_buffer</span><span class="p">[</span><span class="n">group_name</span><span class="p">]</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">buffers</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">term</span> <span class="ow">in</span> <span class="n">buffers</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-          <span class="n">terms</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">group_name</span> <span class="o">+</span> <span class="s2">&quot;-&quot;</span> <span class="o">+</span> <span class="n">name</span><span class="p">,</span> <span class="n">term</span><span class="p">[</span><span class="n">env_idx</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()))</span>  <span class="c1"># type: ignore[unsupported-operator]</span>
+          <span class="n">terms</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">group_name</span> <span class="o">+</span> <span class="s2">&quot;-&quot;</span> <span class="o">+</span> <span class="n">name</span><span class="p">,</span> <span class="n">term</span><span class="p">[</span><span class="n">env_idx</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()))</span>
         <span class="k">continue</span>
 
       <span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span>
@@ -718,9 +720,24 @@ document.write(`
     <span class="c1"># Sanitize (applies to both &quot;warn&quot; and &quot;sanitize&quot; policies).</span>
     <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">tensor</span><span class="p">,</span> <span class="n">nan</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">posinf</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">neginf</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
 
+<div class="viewcode-block" id="ObservationManager.compute">
+<a class="viewcode-back" href="../../../source/api/managers.html#mjlab.managers.ObservationManager.compute">[docs]</a>
   <span class="k">def</span><span class="w"> </span><span class="nf">compute</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span> <span class="n">update_history</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">update_history</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">env_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
   <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute observations for all groups.</span>
+
+<span class="sd">    With env_ids=None (the per-step path), history and delay buffers advance</span>
+<span class="sd">    for all envs. With env_ids (the reset path), only the reset envs&#39; buffers</span>
+<span class="sd">    receive their post-reset frame (a backfill); other envs&#39; buffers, delay</span>
+<span class="sd">    schedules, and lag draws are untouched, so a partial reset does not</span>
+<span class="sd">    advance their observation timelines.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">env_ids</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">update_history</span><span class="p">,</span> <span class="p">(</span>
+      <span class="s2">&quot;env_ids is only meaningful with update_history=True (the reset path).&quot;</span>
+    <span class="p">)</span>
     <span class="c1"># Return cached observations if not updating and cache exists.</span>
     <span class="c1"># This prevents double-pushing to delay buffers when compute() is called</span>
     <span class="c1"># multiple times per control step (e.g., in get_observations() after step()).</span>
@@ -729,12 +746,16 @@ document.write(`
 
     <span class="n">obs_buffer</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">group_name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_group_obs_term_names</span><span class="p">:</span>
-      <span class="n">obs_buffer</span><span class="p">[</span><span class="n">group_name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_group</span><span class="p">(</span><span class="n">group_name</span><span class="p">,</span> <span class="n">update_history</span><span class="p">)</span>
+      <span class="n">obs_buffer</span><span class="p">[</span><span class="n">group_name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_group</span><span class="p">(</span><span class="n">group_name</span><span class="p">,</span> <span class="n">update_history</span><span class="p">,</span> <span class="n">env_ids</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_obs_buffer</span> <span class="o">=</span> <span class="n">obs_buffer</span>
-    <span class="k">return</span> <span class="n">obs_buffer</span>
+    <span class="k">return</span> <span class="n">obs_buffer</span></div>
+
 
   <span class="k">def</span><span class="w"> </span><span class="nf">compute_group</span><span class="p">(</span>
-    <span class="bp">self</span><span class="p">,</span> <span class="n">group_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">update_history</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">group_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">update_history</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">env_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
   <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">]:</span>
     <span class="n">group_cfg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="p">[</span><span class="n">group_name</span><span class="p">]</span>
     <span class="n">group_term_names</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_group_obs_term_names</span><span class="p">[</span><span class="n">group_name</span><span class="p">]</span>
@@ -763,12 +784,19 @@ document.write(`
 
       <span class="k">if</span> <span class="n">term_cfg</span><span class="o">.</span><span class="n">delay_max_lag</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">delay_buffer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_group_obs_term_delay_buffer</span><span class="p">[</span><span class="n">group_name</span><span class="p">][</span><span class="n">term_name</span><span class="p">]</span>
-        <span class="n">delay_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
-        <span class="n">obs</span> <span class="o">=</span> <span class="n">delay_buffer</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">env_ids</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">delay_buffer</span><span class="o">.</span><span class="n">is_initialized</span><span class="p">:</span>
+          <span class="n">delay_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+          <span class="n">obs</span> <span class="o">=</span> <span class="n">delay_buffer</span><span class="o">.</span><span class="n">compute</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="n">delay_buffer</span><span class="o">.</span><span class="n">backfill</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">env_ids</span><span class="p">)</span>
+          <span class="n">obs</span> <span class="o">=</span> <span class="n">delay_buffer</span><span class="o">.</span><span class="n">peek</span><span class="p">()</span>
       <span class="k">if</span> <span class="n">term_cfg</span><span class="o">.</span><span class="n">history_length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
         <span class="n">circular_buffer</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_group_obs_term_history_buffer</span><span class="p">[</span><span class="n">group_name</span><span class="p">][</span><span class="n">term_name</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">update_history</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">circular_buffer</span><span class="o">.</span><span class="n">is_initialized</span><span class="p">:</span>
-          <span class="n">circular_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">env_ids</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">circular_buffer</span><span class="o">.</span><span class="n">is_initialized</span><span class="p">:</span>
+          <span class="k">if</span> <span class="n">update_history</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">circular_buffer</span><span class="o">.</span><span class="n">is_initialized</span><span class="p">:</span>
+            <span class="n">circular_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="n">circular_buffer</span><span class="o">.</span><span class="n">backfill</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">env_ids</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">term_cfg</span><span class="o">.</span><span class="n">flatten_history_dim</span><span class="p">:</span>
           <span class="n">group_obs</span><span class="p">[</span><span class="n">term_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">circular_buffer</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_env</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
@@ -862,9 +890,9 @@ document.write(`
         <span class="n">obs_dims</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">term_cfg</span><span class="o">.</span><span class="n">func</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_env</span><span class="p">,</span> <span class="o">**</span><span class="n">term_cfg</span><span class="o">.</span><span class="n">params</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">term_cfg</span><span class="o">.</span><span class="n">scale</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-          <span class="n">term_cfg</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+          <span class="n">term_cfg</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span>
             <span class="n">term_cfg</span><span class="o">.</span><span class="n">scale</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_env</span><span class="o">.</span><span class="n">device</span>
-          <span class="p">)</span>
+          <span class="p">)</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="n">term_cfg</span><span class="o">.</span><span class="n">noise</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span>
           <span class="n">term_cfg</span><span class="o">.</span><span class="n">noise</span><span class="p">,</span> <span class="n">noise_cfg</span><span class="o">.</span><span class="n">NoiseModelCfg</span>
@@ -954,7 +982,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on May 15, 2026.
+  Last updated on Nov 27, 2026.
   <br/>
 </p>
   </div>

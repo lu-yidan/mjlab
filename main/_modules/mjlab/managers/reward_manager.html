@@ -56,7 +56,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="May 15, 2026"/>
+    <meta name="docbuild:last-update" content="Nov 27, 2026"/>
   </head>
   
   
@@ -195,6 +195,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/tactile_sensor.html">Tactile Sensor</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../source/scene.html">Scene</a></li>
@@ -479,6 +480,7 @@ document.write(`
         <span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span>
       <span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_reward_buf</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span> <span class="o">=</span> <span class="mf">1.0</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_step_reward</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
       <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_term_names</span><span class="p">)),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span>
     <span class="p">)</span></div>
@@ -505,6 +507,11 @@ document.write(`
   <span class="k">def</span><span class="w"> </span><span class="nf">active_terms</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_term_names</span>
 
+  <span class="nd">@property</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">term_rewards</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Per-term rewards from the last step, scaled like ``reward_buf``.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_step_reward</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span>
+
   <span class="c1"># Methods.</span>
 
 <div class="viewcode-block" id="RewardManager.reset">
@@ -529,6 +536,7 @@ document.write(`
   <span class="k">def</span><span class="w"> </span><span class="nf">compute</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_reward_buf</span><span class="p">[:]</span> <span class="o">=</span> <span class="mf">0.0</span>
     <span class="n">scale</span> <span class="o">=</span> <span class="n">dt</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale_by_dt</span> <span class="k">else</span> <span class="mf">1.0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span> <span class="o">=</span> <span class="n">scale</span>
     <span class="k">for</span> <span class="n">term_idx</span><span class="p">,</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">term_cfg</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span>
       <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_term_names</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_term_cfgs</span><span class="p">,</span> <span class="n">strict</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="p">):</span>
@@ -575,6 +583,15 @@ document.write(`
     <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">name</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_term_names</span><span class="p">):</span>
       <span class="n">terms</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">name</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_step_reward</span><span class="p">[</span><span class="n">env_idx</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()]))</span>
     <span class="k">return</span> <span class="n">terms</span>
+
+<div class="viewcode-block" id="RewardManager.get_term">
+<a class="viewcode-back" href="../../../source/api/managers.html#mjlab.managers.RewardManager.get_term">[docs]</a>
+  <span class="k">def</span><span class="w"> </span><span class="nf">get_term</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return one term&#39;s column of ``term_rewards``, shape ``(num_envs,)``.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_term_names</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Term &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39; not found in active terms.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">term_rewards</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_term_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">name</span><span class="p">)]</span></div>
+
 
   <span class="k">def</span><span class="w"> </span><span class="nf">get_term_cfg</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">term_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">RewardTermCfg</span><span class="p">:</span>
     <span class="k">if</span> <span class="n">term_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_term_names</span><span class="p">:</span>
@@ -640,7 +657,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on May 15, 2026.
+  Last updated on Nov 27, 2026.
   <br/>
 </p>
   </div>

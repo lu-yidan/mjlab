@@ -56,7 +56,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="May 15, 2026"/>
+    <meta name="docbuild:last-update" content="Nov 27, 2026"/>
   </head>
   
   
@@ -195,6 +195,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/tactile_sensor.html">Tactile Sensor</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../source/scene.html">Scene</a></li>
@@ -413,7 +414,7 @@ document.write(`
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab</span><span class="w"> </span><span class="kn">import</span> <span class="n">actuator</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.actuator</span><span class="w"> </span><span class="kn">import</span> <span class="n">BuiltinActuatorGroup</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.actuator</span><span class="w"> </span><span class="kn">import</span> <span class="n">BuiltinActuatorGroup</span><span class="p">,</span> <span class="n">FusedActuatorGroup</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.actuator.actuator</span><span class="w"> </span><span class="kn">import</span> <span class="n">TransmissionType</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.actuator.xml_actuator</span><span class="w"> </span><span class="kn">import</span> <span class="n">XmlActuator</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.entity.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">EntityData</span>
@@ -443,6 +444,7 @@ document.write(`
   <span class="n">cameras</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">mujoco</span><span class="o">.</span><span class="n">MjsCamera</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
   <span class="n">lights</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">mujoco</span><span class="o">.</span><span class="n">MjsLight</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
   <span class="n">materials</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">mujoco</span><span class="o">.</span><span class="n">MjsMaterial</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+  <span class="n">textures</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">mujoco</span><span class="o">.</span><span class="n">MjsTexture</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
   <span class="n">pairs</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">mujoco</span><span class="o">.</span><span class="n">MjsPair</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
   <span class="n">actuators</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">mujoco</span><span class="o">.</span><span class="n">MjsActuator</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span>
 
@@ -454,6 +456,7 @@ document.write(`
   <span class="n">cam_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
   <span class="n">light_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
   <span class="n">mat_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+  <span class="n">tex_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
   <span class="n">pair_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
   <span class="n">ctrl_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
   <span class="n">joint_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
@@ -469,6 +472,19 @@ document.write(`
   <span class="k">def</span><span class="w"> </span><span class="nf">root_body_id</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">bodies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">id</span></div>
 
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_outer_index</span><span class="p">(</span>
+  <span class="n">env_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="nb">slice</span><span class="p">,</span> <span class="n">ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="nb">slice</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="nb">slice</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="nb">slice</span><span class="p">]:</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Make [env_ids, ids] select the outer product when both are tensors.</span>
+
+<span class="sd">  Plain [tensor, tensor] indexing pairs the ids elementwise, which silently</span>
+<span class="sd">  writes a diagonal whenever the shapes happen to broadcast.</span>
+<span class="sd">  &quot;&quot;&quot;</span>
+  <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">ids</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">env_ids</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">],</span> <span class="n">ids</span>
+  <span class="k">return</span> <span class="n">env_ids</span><span class="p">,</span> <span class="n">ids</span>
 
 
 <div class="viewcode-block" id="EntityCfg">
@@ -493,7 +509,7 @@ document.write(`
 
   <span class="n">init_state</span><span class="p">:</span> <span class="n">InitialStateCfg</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">InitialStateCfg</span><span class="p">)</span>
   <span class="n">spec_fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">mujoco</span><span class="o">.</span><span class="n">MjSpec</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span>
-    <span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">mujoco</span><span class="o">.</span><span class="n">MjSpec</span><span class="p">())</span>
+    <span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">mujoco</span><span class="o">.</span><span class="n">MjSpec</span><span class="p">()</span>
   <span class="p">)</span>
   <span class="n">articulation</span><span class="p">:</span> <span class="n">EntityArticulationInfoCfg</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
   <span class="n">sort_actuators</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
@@ -507,6 +523,8 @@ document.write(`
   <span class="n">cameras</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">spec_cfg</span><span class="o">.</span><span class="n">CameraCfg</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">tuple</span><span class="p">)</span>
   <span class="n">textures</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">spec_cfg</span><span class="o">.</span><span class="n">TextureCfg</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">tuple</span><span class="p">)</span>
   <span class="n">materials</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">spec_cfg</span><span class="o">.</span><span class="n">MaterialCfg</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">tuple</span><span class="p">)</span>
+  <span class="n">meshes</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">spec_cfg</span><span class="o">.</span><span class="n">MeshCfg</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">tuple</span><span class="p">)</span>
+  <span class="n">geoms</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">spec_cfg</span><span class="o">.</span><span class="n">GeomCfg</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">tuple</span><span class="p">)</span>
   <span class="n">collisions</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">spec_cfg</span><span class="o">.</span><span class="n">CollisionCfg</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">tuple</span><span class="p">)</span>
 
 <div class="viewcode-block" id="EntityCfg.build">
@@ -591,6 +609,16 @@ document.write(`
     <span class="bp">self</span><span class="o">.</span><span class="n">_all_joints</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spec</span><span class="o">.</span><span class="n">joints</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_free_joint</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_non_free_joints</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_all_joints</span><span class="p">)</span>
+
+    <span class="n">free_joints</span> <span class="o">=</span> <span class="p">[</span><span class="n">j</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_joints</span> <span class="k">if</span> <span class="n">j</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">mujoco</span><span class="o">.</span><span class="n">mjtJoint</span><span class="o">.</span><span class="n">mjJNT_FREE</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">free_joints</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+      <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;Entity spec has </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">free_joints</span><span class="p">)</span><span class="si">}</span><span class="s2"> freejoints. An Entity models a &quot;</span>
+        <span class="s2">&quot;single rigid- or articulated-body system with at most one freejoint, &quot;</span>
+        <span class="s2">&quot;which serves as its root. Model each detached floating body as its own &quot;</span>
+        <span class="s2">&quot;entry in SceneCfg.entities instead.&quot;</span>
+      <span class="p">)</span>
+
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_joints</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_joints</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="n">mujoco</span><span class="o">.</span><span class="n">mjtJoint</span><span class="o">.</span><span class="n">mjJNT_FREE</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_free_joint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_all_joints</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
       <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_free_joint</span><span class="o">.</span><span class="n">name</span><span class="p">:</span>
@@ -598,11 +626,16 @@ document.write(`
       <span class="bp">self</span><span class="o">.</span><span class="n">_non_free_joints</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_all_joints</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">_apply_spec_editors</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">spec_cfg</span><span class="o">.</span><span class="n">warn_overlapping_geom_edits</span><span class="p">(</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">geoms</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">collisions</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spec</span>
+    <span class="p">)</span>
     <span class="k">for</span> <span class="n">cfg_list</span> <span class="ow">in</span> <span class="p">[</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">lights</span><span class="p">,</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">cameras</span><span class="p">,</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">textures</span><span class="p">,</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">materials</span><span class="p">,</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">meshes</span><span class="p">,</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">geoms</span><span class="p">,</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">collisions</span><span class="p">,</span>
     <span class="p">]:</span>
       <span class="k">for</span> <span class="n">cfg</span> <span class="ow">in</span> <span class="n">cfg_list</span><span class="p">:</span>
@@ -864,6 +897,10 @@ document.write(`
     <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">materials</span><span class="p">)</span>
 
   <span class="nd">@property</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">texture_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">textures</span><span class="p">)</span>
+
+  <span class="nd">@property</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">pair_names</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
     <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">pairs</span><span class="p">)</span>
 
@@ -904,6 +941,10 @@ document.write(`
   <span class="nd">@property</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">num_materials</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
     <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">material_names</span><span class="p">)</span>
+
+  <span class="nd">@property</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">num_textures</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">texture_names</span><span class="p">)</span>
 
   <span class="nd">@property</span>
   <span class="k">def</span><span class="w"> </span><span class="nf">num_pairs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
@@ -1018,6 +1059,16 @@ document.write(`
       <span class="n">material_subset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">material_names</span>
     <span class="k">return</span> <span class="n">resolve_matching_names</span><span class="p">(</span><span class="n">name_keys</span><span class="p">,</span> <span class="n">material_subset</span><span class="p">,</span> <span class="n">preserve_order</span><span class="p">)</span>
 
+  <span class="k">def</span><span class="w"> </span><span class="nf">find_textures</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">name_keys</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
+    <span class="n">texture_subset</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">preserve_order</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+  <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]]:</span>
+    <span class="k">if</span> <span class="n">texture_subset</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">texture_subset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">texture_names</span>
+    <span class="k">return</span> <span class="n">resolve_matching_names</span><span class="p">(</span><span class="n">name_keys</span><span class="p">,</span> <span class="n">texture_subset</span><span class="p">,</span> <span class="n">preserve_order</span><span class="p">)</span>
+
   <span class="k">def</span><span class="w"> </span><span class="nf">find_pairs</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">name_keys</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
@@ -1087,10 +1138,16 @@ document.write(`
     <span class="k">for</span> <span class="n">act</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_actuators</span><span class="p">:</span>
       <span class="n">act</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">mj_model</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
 
-    <span class="c1"># Vectorize built-in actuators; we&#39;ll loop through custom ones.</span>
+    <span class="c1"># Vectorize built-in actuators, then fuse ideal PD actuators; we&#39;ll loop</span>
+    <span class="c1"># through whatever custom actuators remain.</span>
     <span class="n">builtin_group</span><span class="p">,</span> <span class="n">custom_actuators</span> <span class="o">=</span> <span class="n">BuiltinActuatorGroup</span><span class="o">.</span><span class="n">process</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_actuators</span><span class="p">)</span>
     <span class="n">builtin_group</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_builtin_group</span> <span class="o">=</span> <span class="n">builtin_group</span>
+    <span class="n">fused_actuator_group</span><span class="p">,</span> <span class="n">custom_actuators</span> <span class="o">=</span> <span class="n">FusedActuatorGroup</span><span class="o">.</span><span class="n">process</span><span class="p">(</span>
+      <span class="n">custom_actuators</span>
+    <span class="p">)</span>
+    <span class="n">fused_actuator_group</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="n">device</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_fused_actuator_group</span> <span class="o">=</span> <span class="n">fused_actuator_group</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_custom_actuators</span> <span class="o">=</span> <span class="n">custom_actuators</span>
 
     <span class="c1"># Root state.</span>
@@ -1099,12 +1156,11 @@ document.write(`
     <span class="c1"># Joint state.</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_articulated</span><span class="p">:</span>
       <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">init_state</span><span class="o">.</span><span class="n">joint_pos</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="c1"># Use keyframe joint positions.</span>
-        <span class="n">key_qpos</span> <span class="o">=</span> <span class="n">mj_model</span><span class="o">.</span><span class="n">key</span><span class="p">(</span><span class="s2">&quot;init_state&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">qpos</span>
-        <span class="n">nq_root</span> <span class="o">=</span> <span class="mi">7</span> <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_fixed_base</span> <span class="k">else</span> <span class="mi">0</span>
-        <span class="n">default_joint_pos</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">key_qpos</span><span class="p">[</span><span class="n">nq_root</span><span class="p">:],</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)[</span>
-          <span class="kc">None</span>
-        <span class="p">]</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># Use keyframe joint positions. The scene keyframe holds every entity&#39;s qpos.</span>
+        <span class="n">key_qpos</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+          <span class="n">mj_model</span><span class="o">.</span><span class="n">key</span><span class="p">(</span><span class="s2">&quot;init_state&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">qpos</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span>
+        <span class="p">)</span>
+        <span class="n">default_joint_pos</span> <span class="o">=</span> <span class="n">key_qpos</span><span class="p">[</span><span class="n">indexing</span><span class="o">.</span><span class="n">joint_q_adr</span><span class="p">][</span><span class="kc">None</span><span class="p">]</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
       <span class="k">else</span><span class="p">:</span>
         <span class="n">default_joint_pos</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
           <span class="n">resolve_expr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">init_state</span><span class="o">.</span><span class="n">joint_pos</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">joint_names</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span>
@@ -1115,50 +1171,29 @@ document.write(`
         <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span>
       <span class="p">)[</span><span class="kc">None</span><span class="p">]</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 
-      <span class="c1"># Joint limits.</span>
-      <span class="n">joint_ids_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">j</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_non_free_joints</span><span class="p">]</span>
-      <span class="n">dof_limits</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">jnt_range</span><span class="p">[:,</span> <span class="n">joint_ids_list</span><span class="p">]</span>
-      <span class="n">default_joint_pos_limits</span> <span class="o">=</span> <span class="n">dof_limits</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
-      <span class="n">joint_pos_limits</span> <span class="o">=</span> <span class="n">default_joint_pos_limits</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
-
-      <span class="n">joint_pos_mean</span> <span class="o">=</span> <span class="p">(</span><span class="n">joint_pos_limits</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="n">joint_pos_limits</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span> <span class="o">/</span> <span class="mi">2</span>
-      <span class="n">joint_pos_range</span> <span class="o">=</span> <span class="n">joint_pos_limits</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">joint_pos_limits</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
-
-      <span class="c1"># Soft limits.</span>
-      <span class="n">soft_limit_factor</span> <span class="o">=</span> <span class="p">(</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">articulation</span><span class="o">.</span><span class="n">soft_joint_pos_limit_factor</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">articulation</span>
-        <span class="k">else</span> <span class="mf">1.0</span>
-      <span class="p">)</span>
-      <span class="n">soft_joint_pos_limits</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span>
-        <span class="p">[</span>
-          <span class="n">joint_pos_mean</span> <span class="o">-</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">joint_pos_range</span> <span class="o">*</span> <span class="n">soft_limit_factor</span><span class="p">,</span>
-          <span class="n">joint_pos_mean</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">joint_pos_range</span> <span class="o">*</span> <span class="n">soft_limit_factor</span><span class="p">,</span>
-        <span class="p">],</span>
-        <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span>
-      <span class="p">)</span>
-
-      <span class="c1"># Unlimited joints have jnt_range=[0,0] in MuJoCo, which makes all</span>
-      <span class="c1"># the computed limits [0,0]. Override to [-inf, inf] so downstream</span>
-      <span class="c1"># clamping becomes a no-op. (Can&#39;t do this before soft-limit math</span>
-      <span class="c1"># because inf - inf = NaN.)</span>
-      <span class="n">unlimited</span> <span class="o">=</span> <span class="o">~</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
-        <span class="n">mj_model</span><span class="o">.</span><span class="n">jnt_limited</span><span class="p">[</span><span class="n">joint_ids_list</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span>
-      <span class="p">)</span>
-      <span class="k">for</span> <span class="n">limits</span> <span class="ow">in</span> <span class="p">(</span><span class="n">joint_pos_limits</span><span class="p">,</span> <span class="n">default_joint_pos_limits</span><span class="p">,</span> <span class="n">soft_joint_pos_limits</span><span class="p">):</span>
-        <span class="n">limits</span><span class="p">[:,</span> <span class="n">unlimited</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;-inf&quot;</span><span class="p">)</span>
-        <span class="n">limits</span><span class="p">[:,</span> <span class="n">unlimited</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
       <span class="n">empty_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
       <span class="n">default_joint_pos</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="o">*</span><span class="n">empty_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
       <span class="n">default_joint_vel</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="o">*</span><span class="n">empty_shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
-      <span class="n">default_joint_pos_limits</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span>
-        <span class="o">*</span><span class="n">empty_shape</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span>
+
+    <span class="c1"># Joint limits are read from the model on access, so they follow DR.</span>
+    <span class="n">joint_ids_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">j</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_non_free_joints</span><span class="p">]</span>
+    <span class="n">joint_unlimited</span> <span class="o">=</span> <span class="o">~</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+      <span class="n">mj_model</span><span class="o">.</span><span class="n">jnt_limited</span><span class="p">[</span><span class="n">joint_ids_list</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span>
+    <span class="p">)</span>
+    <span class="n">soft_limit_factor</span> <span class="o">=</span> <span class="p">(</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">articulation</span><span class="o">.</span><span class="n">soft_joint_pos_limit_factor</span>
+      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">articulation</span>
+      <span class="k">else</span> <span class="mf">1.0</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_articulated</span><span class="p">:</span>
+      <span class="n">default_joint_pos_limits</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+        <span class="n">joint_unlimited</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">],</span>
+        <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="o">-</span><span class="n">torch</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">inf</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">),</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">jnt_range</span><span class="p">[:,</span> <span class="n">joint_ids_list</span><span class="p">],</span>
       <span class="p">)</span>
-      <span class="n">joint_pos_limits</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="o">*</span><span class="n">empty_shape</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
-      <span class="n">soft_joint_pos_limits</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span>
-        <span class="o">*</span><span class="n">empty_shape</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span>
-      <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">default_joint_pos_limits</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_actuated</span><span class="p">:</span>
       <span class="n">joint_pos_target</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span>
@@ -1174,6 +1209,12 @@ document.write(`
       <span class="n">joint_pos_target</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
       <span class="n">joint_vel_target</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
       <span class="n">joint_effort_target</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+
+    <span class="c1"># Orientation terms need a reference direction, so fall back to world -Z</span>
+    <span class="c1"># when gravity is zero.</span>
+    <span class="n">gravity</span> <span class="o">=</span> <span class="n">mj_model</span><span class="o">.</span><span class="n">opt</span><span class="o">.</span><span class="n">gravity</span>
+    <span class="n">gravity_norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">gravity</span><span class="p">)</span>
+    <span class="n">gravity_dir</span> <span class="o">=</span> <span class="n">gravity</span> <span class="o">/</span> <span class="n">gravity_norm</span> <span class="k">if</span> <span class="n">gravity_norm</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">)</span>
 
     <span class="c1"># Only allocate tendon targets if there are actuators using tendon transmission.</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">has_tendon_actuators</span><span class="p">:</span>
@@ -1219,9 +1260,11 @@ document.write(`
       <span class="n">default_joint_pos</span><span class="o">=</span><span class="n">default_joint_pos</span><span class="p">,</span>
       <span class="n">default_joint_vel</span><span class="o">=</span><span class="n">default_joint_vel</span><span class="p">,</span>
       <span class="n">default_joint_pos_limits</span><span class="o">=</span><span class="n">default_joint_pos_limits</span><span class="p">,</span>
-      <span class="n">joint_pos_limits</span><span class="o">=</span><span class="n">joint_pos_limits</span><span class="p">,</span>
-      <span class="n">soft_joint_pos_limits</span><span class="o">=</span><span class="n">soft_joint_pos_limits</span><span class="p">,</span>
-      <span class="n">gravity_vec_w</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+      <span class="n">joint_unlimited</span><span class="o">=</span><span class="n">joint_unlimited</span><span class="p">,</span>
+      <span class="n">soft_joint_pos_limit_factor</span><span class="o">=</span><span class="n">soft_limit_factor</span><span class="p">,</span>
+      <span class="n">gravity_vec_w</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">gravity_dir</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span>
+        <span class="n">nworld</span><span class="p">,</span> <span class="mi">1</span>
+      <span class="p">),</span>
       <span class="n">forward_vec_b</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">nworld</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
       <span class="n">is_fixed_base</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">is_fixed_base</span><span class="p">,</span>
       <span class="n">is_articulated</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">is_articulated</span><span class="p">,</span>
@@ -1234,6 +1277,10 @@ document.write(`
       <span class="n">tendon_effort_target</span><span class="o">=</span><span class="n">tendon_effort_target</span><span class="p">,</span>
       <span class="n">site_effort_target</span><span class="o">=</span><span class="n">site_effort_target</span><span class="p">,</span>
       <span class="n">encoder_bias</span><span class="o">=</span><span class="n">encoder_bias</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="c1"># Position targets zeroed by reset() and not set since.</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_cleared_joint_pos_target</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span>
+      <span class="n">joint_pos_target</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">bool</span>
     <span class="p">)</span></div>
 
 
@@ -1257,6 +1304,7 @@ document.write(`
 <span class="sd">    and by commands that teleport the robot to a new pose mid-episode.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">clear_state</span><span class="p">(</span><span class="n">env_ids</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_cleared_joint_pos_target</span><span class="p">[</span><span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span> <span class="k">if</span> <span class="n">env_ids</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">env_ids</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
 
     <span class="k">for</span> <span class="n">act</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_actuators</span><span class="p">:</span>
       <span class="n">act</span><span class="o">.</span><span class="n">reset</span><span class="p">(</span><span class="n">env_ids</span><span class="p">)</span></div>
@@ -1276,13 +1324,27 @@ document.write(`
 
 <div class="viewcode-block" id="Entity.write_data_to_sim">
 <a class="viewcode-back" href="../../../source/api/entity.html#mjlab.entity.Entity.write_data_to_sim">[docs]</a>
-  <span class="k">def</span><span class="w"> </span><span class="nf">write_data_to_sim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">write_data_to_sim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Convert actuator targets into low-level controls and write them to the sim.</span>
 
 <span class="sd">    Called before each ``sim.step()`` within the decimation loop. Builtin actuators are</span>
 <span class="sd">    applied in a single batched operation; custom actuators are applied individually.</span>
+
+<span class="sd">    Pass ``env_ids`` after a reset to initialize only those environments&#39; controls</span>
+<span class="sd">    and backfill their actuator histories without advancing simulation time.</span>
+<span class="sd">    Cleared position targets are written as the post-reset joint positions, so</span>
+<span class="sd">    delayed actuators hold the reset pose instead of commanding 0.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_apply_actuator_controls</span><span class="p">()</span></div>
+    <span class="k">if</span> <span class="n">env_ids</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_actuated</span><span class="p">:</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_apply_actuator_controls</span><span class="p">(</span><span class="n">env_ids</span><span class="p">)</span>
+      <span class="k">return</span>
+    <span class="n">targets</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">joint_pos_target</span>
+    <span class="n">stored</span> <span class="o">=</span> <span class="n">targets</span><span class="p">[</span><span class="n">env_ids</span><span class="p">]</span>
+    <span class="n">targets</span><span class="p">[</span><span class="n">env_ids</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_cleared_joint_pos_target</span><span class="p">[</span><span class="n">env_ids</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">joint_pos</span><span class="p">[</span><span class="n">env_ids</span><span class="p">],</span> <span class="n">stored</span>
+    <span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_apply_actuator_controls</span><span class="p">(</span><span class="n">env_ids</span><span class="p">)</span>
+    <span class="n">targets</span><span class="p">[</span><span class="n">env_ids</span><span class="p">]</span> <span class="o">=</span> <span class="n">stored</span></div>
 
 
 <div class="viewcode-block" id="Entity.write_ctrl_to_sim">
@@ -1359,6 +1421,27 @@ document.write(`
 <span class="sd">        None, all environments are set.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">write_root_velocity</span><span class="p">(</span><span class="n">root_velocity</span><span class="p">,</span> <span class="n">env_ids</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Entity.write_root_link_velocity_b_to_sim">
+<a class="viewcode-back" href="../../../source/api/entity.html#mjlab.entity.Entity.write_root_link_velocity_b_to_sim">[docs]</a>
+  <span class="k">def</span><span class="w"> </span><span class="nf">write_root_link_velocity_b_to_sim</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span>
+    <span class="n">root_velocity_b</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span>
+    <span class="n">env_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="nb">slice</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+  <span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Like `write_root_link_velocity_to_sim()` but the velocity is expressed</span>
+<span class="sd">    in the root link&#39;s body frame. Reads the orientation from qpos, so it is</span>
+<span class="sd">    safe to call during a reset before forward() runs.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">      root_velocity_b: Tensor of shape (N, 6) where N is the number of</span>
+<span class="sd">        environments. Contains linear velocity (3) at body origin and angular</span>
+<span class="sd">        velocity (3), both in the root link&#39;s body frame.</span>
+<span class="sd">      env_ids: Optional tensor or slice specifying which environments to set. If</span>
+<span class="sd">        None, all environments are set.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">write_root_velocity_b</span><span class="p">(</span><span class="n">root_velocity_b</span><span class="p">,</span> <span class="n">env_ids</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Entity.write_root_com_velocity_to_sim">
@@ -1466,7 +1549,9 @@ document.write(`
       <span class="n">env_ids</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">joint_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
       <span class="n">joint_ids</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">joint_pos_target</span><span class="p">[</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">joint_ids</span><span class="p">]</span> <span class="o">=</span> <span class="n">position</span></div>
+    <span class="n">env_ids</span><span class="p">,</span> <span class="n">joint_ids</span> <span class="o">=</span> <span class="n">_outer_index</span><span class="p">(</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">joint_ids</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">joint_pos_target</span><span class="p">[</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">joint_ids</span><span class="p">]</span> <span class="o">=</span> <span class="n">position</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_cleared_joint_pos_target</span><span class="p">[</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">joint_ids</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span></div>
 
 
 <div class="viewcode-block" id="Entity.set_joint_velocity_target">
@@ -1488,6 +1573,7 @@ document.write(`
       <span class="n">env_ids</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">joint_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
       <span class="n">joint_ids</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">env_ids</span><span class="p">,</span> <span class="n">joint_ids</span> <span class="o">=</span> <span class="n">_outer_index</span><span class="p">(</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">joint_ids</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">joint_vel_target</span><span class="p">[</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">joint_ids</span><span class="p">]</span> <span class="o">=</span> <span class="n">velocity</span></div>
 
 
@@ -1510,6 +1596,7 @@ document.write(`
       <span class="n">env_ids</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">joint_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
       <span class="n">joint_ids</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">env_ids</span><span class="p">,</span> <span class="n">joint_ids</span> <span class="o">=</span> <span class="n">_outer_index</span><span class="p">(</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">joint_ids</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">joint_effort_target</span><span class="p">[</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">joint_ids</span><span class="p">]</span> <span class="o">=</span> <span class="n">effort</span></div>
 
 
@@ -1532,6 +1619,7 @@ document.write(`
       <span class="n">env_ids</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">tendon_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
       <span class="n">tendon_ids</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">env_ids</span><span class="p">,</span> <span class="n">tendon_ids</span> <span class="o">=</span> <span class="n">_outer_index</span><span class="p">(</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">tendon_ids</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">tendon_len_target</span><span class="p">[</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">tendon_ids</span><span class="p">]</span> <span class="o">=</span> <span class="n">length</span></div>
 
 
@@ -1554,6 +1642,7 @@ document.write(`
       <span class="n">env_ids</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">tendon_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
       <span class="n">tendon_ids</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">env_ids</span><span class="p">,</span> <span class="n">tendon_ids</span> <span class="o">=</span> <span class="n">_outer_index</span><span class="p">(</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">tendon_ids</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">tendon_vel_target</span><span class="p">[</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">tendon_ids</span><span class="p">]</span> <span class="o">=</span> <span class="n">velocity</span></div>
 
 
@@ -1576,6 +1665,7 @@ document.write(`
       <span class="n">env_ids</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">tendon_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
       <span class="n">tendon_ids</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">env_ids</span><span class="p">,</span> <span class="n">tendon_ids</span> <span class="o">=</span> <span class="n">_outer_index</span><span class="p">(</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">tendon_ids</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">tendon_effort_target</span><span class="p">[</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">tendon_ids</span><span class="p">]</span> <span class="o">=</span> <span class="n">effort</span></div>
 
 
@@ -1598,6 +1688,7 @@ document.write(`
       <span class="n">env_ids</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">site_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
       <span class="n">site_ids</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">env_ids</span><span class="p">,</span> <span class="n">site_ids</span> <span class="o">=</span> <span class="n">_outer_index</span><span class="p">(</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">site_ids</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">site_effort_target</span><span class="p">[</span><span class="n">env_ids</span><span class="p">,</span> <span class="n">site_ids</span><span class="p">]</span> <span class="o">=</span> <span class="n">effort</span></div>
 
 
@@ -1672,6 +1763,7 @@ document.write(`
     <span class="n">cameras</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">cameras</span><span class="p">)</span>
     <span class="n">lights</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">lights</span><span class="p">)</span>
     <span class="n">materials</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">materials</span><span class="p">)</span>
+    <span class="n">textures</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">textures</span><span class="p">)</span>
     <span class="n">pairs</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">pairs</span><span class="p">)</span>
 
     <span class="n">body_ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">b</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">bodies</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
@@ -1681,6 +1773,7 @@ document.write(`
     <span class="n">cam_ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">c</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">cameras</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
     <span class="n">light_ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">lt</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">lt</span> <span class="ow">in</span> <span class="n">lights</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
     <span class="n">mat_ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">m</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">materials</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
+    <span class="n">tex_ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">t</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">textures</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
     <span class="n">pair_ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">p</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">pairs</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
     <span class="n">joint_ids</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="n">j</span><span class="o">.</span><span class="n">id</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">joints</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">int</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
 
@@ -1725,6 +1818,7 @@ document.write(`
       <span class="n">cameras</span><span class="o">=</span><span class="n">cameras</span><span class="p">,</span>
       <span class="n">lights</span><span class="o">=</span><span class="n">lights</span><span class="p">,</span>
       <span class="n">materials</span><span class="o">=</span><span class="n">materials</span><span class="p">,</span>
+      <span class="n">textures</span><span class="o">=</span><span class="n">textures</span><span class="p">,</span>
       <span class="n">pairs</span><span class="o">=</span><span class="n">pairs</span><span class="p">,</span>
       <span class="n">actuators</span><span class="o">=</span><span class="n">actuators</span><span class="p">,</span>
       <span class="n">body_ids</span><span class="o">=</span><span class="n">body_ids</span><span class="p">,</span>
@@ -1734,6 +1828,7 @@ document.write(`
       <span class="n">cam_ids</span><span class="o">=</span><span class="n">cam_ids</span><span class="p">,</span>
       <span class="n">light_ids</span><span class="o">=</span><span class="n">light_ids</span><span class="p">,</span>
       <span class="n">mat_ids</span><span class="o">=</span><span class="n">mat_ids</span><span class="p">,</span>
+      <span class="n">tex_ids</span><span class="o">=</span><span class="n">tex_ids</span><span class="p">,</span>
       <span class="n">pair_ids</span><span class="o">=</span><span class="n">pair_ids</span><span class="p">,</span>
       <span class="n">ctrl_ids</span><span class="o">=</span><span class="n">ctrl_ids</span><span class="p">,</span>
       <span class="n">joint_ids</span><span class="o">=</span><span class="n">joint_ids</span><span class="p">,</span>
@@ -1744,12 +1839,15 @@ document.write(`
       <span class="n">free_joint_v_adr</span><span class="o">=</span><span class="n">free_joint_v_adr</span><span class="p">,</span>
     <span class="p">)</span>
 
-  <span class="k">def</span><span class="w"> </span><span class="nf">_apply_actuator_controls</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_builtin_group</span><span class="o">.</span><span class="n">apply_controls</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">_apply_actuator_controls</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_builtin_group</span><span class="o">.</span><span class="n">apply_controls</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">,</span> <span class="n">env_ids</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_fused_actuator_group</span><span class="o">.</span><span class="n">apply_controls</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">,</span> <span class="n">env_ids</span><span class="p">)</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span> <span class="k">if</span> <span class="n">env_ids</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">env_ids</span>
     <span class="k">for</span> <span class="n">act</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_custom_actuators</span><span class="p">:</span>
       <span class="n">command</span> <span class="o">=</span> <span class="n">act</span><span class="o">.</span><span class="n">get_command</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="p">)</span>
+      <span class="n">command</span><span class="o">.</span><span class="n">reset_env_ids</span> <span class="o">=</span> <span class="n">env_ids</span>
       <span class="n">command</span> <span class="o">=</span> <span class="n">act</span><span class="o">.</span><span class="n">apply_delay</span><span class="p">(</span><span class="n">command</span><span class="p">)</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">write_ctrl</span><span class="p">(</span><span class="n">act</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="n">command</span><span class="p">),</span> <span class="n">act</span><span class="o">.</span><span class="n">ctrl_ids</span><span class="p">)</span></div>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">write_ctrl</span><span class="p">(</span><span class="n">act</span><span class="o">.</span><span class="n">compute</span><span class="p">(</span><span class="n">command</span><span class="p">)[</span><span class="n">rows</span><span class="p">],</span> <span class="n">act</span><span class="o">.</span><span class="n">ctrl_ids</span><span class="p">,</span> <span class="n">env_ids</span><span class="p">)</span></div>
 
 </pre></div>
 
@@ -1798,7 +1896,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on May 15, 2026.
+  Last updated on Nov 27, 2026.
   <br/>
 </p>
   </div>

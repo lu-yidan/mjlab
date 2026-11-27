@@ -59,7 +59,7 @@
     <link rel="prev" title="Recorders" href="../recorders.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="Nov 11, 2026"/>
+    <meta name="docbuild:last-update" content="Nov 27, 2026"/>
   </head>
   
   
@@ -196,6 +196,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../sensors/raycast_sensor.html">RayCast Sensor</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../sensors/rgbd_camera.html">RGB-D Camera</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../sensors/tactile_sensor.html">Tactile Sensor</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../scene.html">Scene</a></li>
@@ -583,6 +584,9 @@ uv<span class="w"> </span>run<span class="w"> </span>play<span class="w"> </span
 <span class="c1"># From a local checkpoint.</span>
 uv<span class="w"> </span>run<span class="w"> </span>play<span class="w"> </span>Mjlab-Velocity-Flat-Unitree-G1<span class="w"> </span><span class="se">\</span>
 <span class="w">    </span>--checkpoint-file<span class="w"> </span>logs/rsl_rl/g1_velocity/2025-01-27_14-30-00/model_1000.pt
+
+<span class="c1"># From the last checkpoint of the newest local run.</span>
+uv<span class="w"> </span>run<span class="w"> </span>play<span class="w"> </span>Mjlab-Velocity-Flat-Unitree-G1<span class="w"> </span>--checkpoint-file<span class="w"> </span>latest
 </pre></div>
 </div>
 <p>Key <code class="docutils literal notranslate"><span class="pre">play</span></code> arguments:</p>
@@ -802,7 +806,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on Nov 11, 2026.
+  Last updated on Nov 27, 2026.
   <br/>
 </p>
   </div>

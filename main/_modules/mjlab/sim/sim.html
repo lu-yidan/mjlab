@@ -56,7 +56,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="May 15, 2026"/>
+    <meta name="docbuild:last-update" content="Nov 27, 2026"/>
   </head>
   
   
@@ -195,6 +195,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/tactile_sensor.html">Tactile Sensor</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../source/scene.html">Scene</a></li>
@@ -403,6 +404,8 @@ document.write(`
 <span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">gc</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections.abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">Callable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">contextmanager</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TYPE_CHECKING</span><span class="p">,</span> <span class="n">Literal</span><span class="p">,</span> <span class="n">cast</span>
@@ -413,10 +416,10 @@ document.write(`
 <span class="kn">import</span><span class="w"> </span><span class="nn">warp</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">wp</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.entity.variants</span><span class="w"> </span><span class="kn">import</span> <span class="n">VARIANT_DEPENDENT_FIELDS</span><span class="p">,</span> <span class="n">build_variant_model</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.managers.event_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">RecomputeLevel</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.sim.randomization</span><span class="w"> </span><span class="kn">import</span> <span class="n">expand_model_fields</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.sim.sim_data</span><span class="w"> </span><span class="kn">import</span> <span class="n">TorchArray</span><span class="p">,</span> <span class="n">WarpBridge</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.utils.nan_guard</span><span class="w"> </span><span class="kn">import</span> <span class="n">NanGuard</span><span class="p">,</span> <span class="n">NanGuardCfg</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.utils.spec</span><span class="w"> </span><span class="kn">import</span> <span class="n">compile_spec</span>
 
 <span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
   <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.entity.variants</span><span class="w"> </span><span class="kn">import</span> <span class="n">VariantMetadata</span>
@@ -468,6 +471,17 @@ document.write(`
   <span class="s2">&quot;newton&quot;</span><span class="p">:</span> <span class="n">mujoco</span><span class="o">.</span><span class="n">mjtSolver</span><span class="o">.</span><span class="n">mjSOL_NEWTON</span><span class="p">,</span>
   <span class="s2">&quot;cg&quot;</span><span class="p">:</span> <span class="n">mujoco</span><span class="o">.</span><span class="n">mjtSolver</span><span class="o">.</span><span class="n">mjSOL_CG</span><span class="p">,</span>
   <span class="s2">&quot;pgs&quot;</span><span class="p">:</span> <span class="n">mujoco</span><span class="o">.</span><span class="n">mjtSolver</span><span class="o">.</span><span class="n">mjSOL_PGS</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="n">_BROADPHASE_MAP</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="s2">&quot;nxn&quot;</span><span class="p">:</span> <span class="n">mjwarp</span><span class="o">.</span><span class="n">BroadphaseType</span><span class="o">.</span><span class="n">NXN</span><span class="p">,</span>
+  <span class="s2">&quot;sap_tile&quot;</span><span class="p">:</span> <span class="n">mjwarp</span><span class="o">.</span><span class="n">BroadphaseType</span><span class="o">.</span><span class="n">SAP_TILE</span><span class="p">,</span>
+  <span class="s2">&quot;sap_segmented&quot;</span><span class="p">:</span> <span class="n">mjwarp</span><span class="o">.</span><span class="n">BroadphaseType</span><span class="o">.</span><span class="n">SAP_SEGMENTED</span><span class="p">,</span>
+<span class="p">}</span>
+<span class="n">_BROADPHASE_FILTER_MAP</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="s2">&quot;plane&quot;</span><span class="p">:</span> <span class="n">mjwarp</span><span class="o">.</span><span class="n">BroadphaseFilter</span><span class="o">.</span><span class="n">PLANE</span><span class="p">,</span>
+  <span class="s2">&quot;sphere&quot;</span><span class="p">:</span> <span class="n">mjwarp</span><span class="o">.</span><span class="n">BroadphaseFilter</span><span class="o">.</span><span class="n">SPHERE</span><span class="p">,</span>
+  <span class="s2">&quot;aabb&quot;</span><span class="p">:</span> <span class="n">mjwarp</span><span class="o">.</span><span class="n">BroadphaseFilter</span><span class="o">.</span><span class="n">AABB</span><span class="p">,</span>
+  <span class="s2">&quot;obb&quot;</span><span class="p">:</span> <span class="n">mjwarp</span><span class="o">.</span><span class="n">BroadphaseFilter</span><span class="o">.</span><span class="n">OBB</span><span class="p">,</span>
 <span class="p">}</span>
 
 <span class="c1"># Maps short flag names to MuJoCo enum values.</span>
@@ -562,10 +576,51 @@ document.write(`
 
 <span class="sd">  Constraint arrays are batched by world: no world may have more than njmax</span>
 <span class="sd">  constraints. If None, a heuristic value is used.&quot;&quot;&quot;</span>
-  <span class="n">ls_parallel</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># Boosts perf quite noticeably.</span>
+  <span class="n">nccdmax</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Number of convex collision detection (CCD) contacts to allocate per world.</span>
+
+<span class="sd">  Each CCD contact reserves scratch memory for the EPA and multi-contact solvers.</span>
+<span class="sd">  Must not exceed nconmax. If None, it equals nconmax.&quot;&quot;&quot;</span>
   <span class="n">contact_sensor_maxmatch</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">64</span>
+  <span class="n">broadphase</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;nxn&quot;</span><span class="p">,</span> <span class="s2">&quot;sap_tile&quot;</span><span class="p">,</span> <span class="s2">&quot;sap_segmented&quot;</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Broadphase collision algorithm. If None, use the MuJoCo Warp default.&quot;&quot;&quot;</span>
+  <span class="n">broadphase_filter</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;plane&quot;</span><span class="p">,</span> <span class="s2">&quot;sphere&quot;</span><span class="p">,</span> <span class="s2">&quot;aabb&quot;</span><span class="p">,</span> <span class="s2">&quot;obb&quot;</span><span class="p">],</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Bounding-volume filters applied during broadphase collision checking.</span>
+
+<span class="sd">  If None, use the MuJoCo Warp default.&quot;&quot;&quot;</span>
+  <span class="n">graph_conditional</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Use CUDA graph conditional nodes, which let the solver exit early once all</span>
+<span class="sd">  worlds converge. Requires CUDA 12.4 or newer.</span>
+
+<span class="sd">  If None, use the MuJoCo Warp default.&quot;&quot;&quot;</span>
+  <span class="n">ls_parallel</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Deprecated and ignored. Parallel linesearch was removed in MuJoCo Warp 3.10.&quot;&quot;&quot;</span>
   <span class="n">mujoco</span><span class="p">:</span> <span class="n">MujocoCfg</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">MujocoCfg</span><span class="p">)</span>
-  <span class="n">nan_guard</span><span class="p">:</span> <span class="n">NanGuardCfg</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">NanGuardCfg</span><span class="p">)</span></div>
+  <span class="n">nan_guard</span><span class="p">:</span> <span class="n">NanGuardCfg</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="n">NanGuardCfg</span><span class="p">)</span>
+
+  <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ls_parallel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+        <span class="s2">&quot;SimulationCfg.ls_parallel is deprecated and ignored; parallel &quot;</span>
+        <span class="s2">&quot;linesearch was removed in MuJoCo Warp 3.10.&quot;</span><span class="p">,</span>
+        <span class="ne">DeprecationWarning</span><span class="p">,</span>
+        <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+      <span class="p">)</span>
+
+<div class="viewcode-block" id="SimulationCfg.apply_wp_opt">
+<a class="viewcode-back" href="../../../source/api/sim.html#mjlab.sim.SimulationCfg.apply_wp_opt">[docs]</a>
+  <span class="k">def</span><span class="w"> </span><span class="nf">apply_wp_opt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">wp_opt</span><span class="p">:</span> <span class="n">mjwarp</span><span class="o">.</span><span class="n">Option</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Apply MuJoCo Warp-only settings to a warp Option (post ``put_model``).&quot;&quot;&quot;</span>
+    <span class="n">wp_opt</span><span class="o">.</span><span class="n">contact_sensor_maxmatch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">contact_sensor_maxmatch</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">broadphase</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">wp_opt</span><span class="o">.</span><span class="n">broadphase</span> <span class="o">=</span> <span class="n">_BROADPHASE_MAP</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">broadphase</span><span class="p">]</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">broadphase_filter</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">wp_opt</span><span class="o">.</span><span class="n">broadphase_filter</span> <span class="o">=</span> <span class="n">mjwarp</span><span class="o">.</span><span class="n">BroadphaseFilter</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+      <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">broadphase_filter</span><span class="p">:</span>
+        <span class="n">wp_opt</span><span class="o">.</span><span class="n">broadphase_filter</span> <span class="o">|=</span> <span class="n">_BROADPHASE_FILTER_MAP</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph_conditional</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+      <span class="n">wp_opt</span><span class="o">.</span><span class="n">graph_conditional</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">graph_conditional</span></div>
+</div>
 
 
 
@@ -576,11 +631,11 @@ document.write(`
 
 <span class="sd">  CUDA Graph Capture</span>
 <span class="sd">  ------------------</span>
-<span class="sd">  On CUDA devices with memory pools enabled, the simulation captures CUDA graphs</span>
-<span class="sd">  for ``step()``, ``forward()``, and ``reset()`` operations. Graph capture records</span>
-<span class="sd">  a sequence of GPU kernels and their memory addresses, then replays the entire</span>
-<span class="sd">  sequence with a single kernel launch, eliminating CPU overhead from repeated</span>
-<span class="sd">  kernel dispatches.</span>
+<span class="sd">  On CPU, and on CUDA devices with memory pools enabled, the simulation captures</span>
+<span class="sd">  graphs for ``step()``, ``forward()``, and ``reset()`` operations. Graph capture</span>
+<span class="sd">  records a sequence of kernels and their memory addresses, then replays the entire</span>
+<span class="sd">  sequence with a single launch, eliminating Python overhead from repeated kernel</span>
+<span class="sd">  dispatches. On CPU this makes stepping several times faster.</span>
 
 <span class="sd">  **Important:** A captured graph holds pointers to the GPU arrays that existed</span>
 <span class="sd">  at capture time. If those arrays are later replaced (e.g., via</span>
@@ -626,7 +681,7 @@ document.write(`
     <span class="k">if</span> <span class="n">spec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">variant_info</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_init_with_variants</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">variant_info</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">spec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-      <span class="n">compiled</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">compile</span><span class="p">()</span>
+      <span class="n">compiled</span> <span class="o">=</span> <span class="n">compile_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
       <span class="n">cfg</span><span class="o">.</span><span class="n">mujoco</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">compiled</span><span class="p">)</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_init_with_model</span><span class="p">(</span><span class="n">compiled</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -644,8 +699,7 @@ document.write(`
 
     <span class="k">with</span> <span class="n">wp</span><span class="o">.</span><span class="n">ScopedDevice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wp_device</span><span class="p">):</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_wp_model</span> <span class="o">=</span> <span class="n">mjwarp</span><span class="o">.</span><span class="n">put_model</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mj_model</span><span class="p">)</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">_wp_model</span><span class="o">.</span><span class="n">opt</span><span class="o">.</span><span class="n">ls_parallel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">ls_parallel</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">_wp_model</span><span class="o">.</span><span class="n">opt</span><span class="o">.</span><span class="n">contact_sensor_maxmatch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">contact_sensor_maxmatch</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">apply_wp_opt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wp_model</span><span class="o">.</span><span class="n">opt</span><span class="p">)</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_finish_init</span><span class="p">()</span>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">_init_with_variants</span><span class="p">(</span>
@@ -673,8 +727,7 @@ document.write(`
       <span class="n">mujoco</span><span class="o">.</span><span class="n">mj_forward</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_mj_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mj_data</span><span class="p">)</span>
 
       <span class="bp">self</span><span class="o">.</span><span class="n">_wp_model</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">wp_model</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">_wp_model</span><span class="o">.</span><span class="n">opt</span><span class="o">.</span><span class="n">ls_parallel</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">ls_parallel</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">_wp_model</span><span class="o">.</span><span class="n">opt</span><span class="o">.</span><span class="n">contact_sensor_maxmatch</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">contact_sensor_maxmatch</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">apply_wp_opt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wp_model</span><span class="o">.</span><span class="n">opt</span><span class="p">)</span>
 
       <span class="c1"># Snapshot variant-dependent fields as per-world defaults so</span>
       <span class="c1"># DR scale/add operations use each variant&#39;s base values.</span>
@@ -709,6 +762,7 @@ document.write(`
       <span class="bp">self</span><span class="o">.</span><span class="n">_mj_data</span><span class="p">,</span>
       <span class="n">nworld</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span>
       <span class="n">nconmax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">nconmax</span><span class="p">,</span>
+      <span class="n">nccdmax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">nccdmax</span><span class="p">,</span>
       <span class="n">njmax</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">njmax</span><span class="p">,</span>
     <span class="p">)</span>
 
@@ -718,8 +772,9 @@ document.write(`
     <span class="bp">self</span><span class="o">.</span><span class="n">_model_bridge</span> <span class="o">=</span> <span class="n">WarpBridge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wp_model</span><span class="p">,</span> <span class="n">nworld</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_data_bridge</span> <span class="o">=</span> <span class="n">WarpBridge</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wp_data</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">_sensor_context</span><span class="p">:</span> <span class="n">SensorContext</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_data_listeners</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[],</span> <span class="kc">None</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
 
-    <span class="bp">self</span><span class="o">.</span><span class="n">use_cuda_graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_should_use_cuda_graph</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">use_cuda_graph</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_can_capture_graphs</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">create_graph</span><span class="p">()</span>
 
     <span class="bp">self</span><span class="o">.</span><span class="n">nan_guard</span> <span class="o">=</span> <span class="n">NanGuard</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">nan_guard</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_envs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mj_model</span><span class="p">)</span>
@@ -738,7 +793,7 @@ document.write(`
 <span class="sd">    - ``__init__()`` during simulation initialization</span>
 <span class="sd">    - ``expand_model_fields()`` after replacing model arrays</span>
 
-<span class="sd">    On CPU devices or when memory pools are disabled, this is a no-op.</span>
+<span class="sd">    On CUDA devices without memory pools, this is a no-op.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">step_graph</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">forward_graph</span> <span class="o">=</span> <span class="kc">None</span>
@@ -860,18 +915,14 @@ document.write(`
 
 <div class="viewcode-block" id="Simulation.recompute_constants">
 <a class="viewcode-back" href="../../../source/api/sim.html#mjlab.sim.Simulation.recompute_constants">[docs]</a>
-  <span class="k">def</span><span class="w"> </span><span class="nf">recompute_constants</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">level</span><span class="p">:</span> <span class="n">RecomputeLevel</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">recompute_constants</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">groups</span><span class="p">:</span> <span class="n">mjwarp</span><span class="o">.</span><span class="n">SetConstGroup</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Recompute derived model constants after domain randomization.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">      level: Which constants to recompute. ``set_const`` is the most</span>
-<span class="sd">        expensive (covers body_mass changes), ``set_const_0`` covers</span>
-<span class="sd">        qpos0/body_inertia/dof_armature changes, and ``set_const_fixed``</span>
-<span class="sd">        is the cheapest (covers body_gravcomp changes).</span>
+<span class="sd">      groups: mujoco_warp.SetConstGroup flags selecting what to recompute.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">fn</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">mjwarp</span><span class="p">,</span> <span class="n">level</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
     <span class="k">with</span> <span class="n">wp</span><span class="o">.</span><span class="n">ScopedDevice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wp_device</span><span class="p">):</span>
-      <span class="n">fn</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wp_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wp_data</span><span class="p">)</span></div>
+      <span class="n">mjwarp</span><span class="o">.</span><span class="n">set_const</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_wp_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wp_data</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">)</span></div>
 
 
   <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -880,6 +931,7 @@ document.write(`
         <span class="n">wp</span><span class="o">.</span><span class="n">capture_launch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">forward_graph</span><span class="p">)</span>
       <span class="k">else</span><span class="p">:</span>
         <span class="n">mjwarp</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wp_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">wp_data</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_notify_data_changed</span><span class="p">()</span>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">with</span> <span class="n">wp</span><span class="o">.</span><span class="n">ScopedDevice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wp_device</span><span class="p">):</span>
@@ -888,6 +940,7 @@ document.write(`
           <span class="n">wp</span><span class="o">.</span><span class="n">capture_launch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">step_graph</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
           <span class="n">mjwarp</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wp_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">wp_data</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_notify_data_changed</span><span class="p">()</span>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">with</span> <span class="n">wp</span><span class="o">.</span><span class="n">ScopedDevice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wp_device</span><span class="p">):</span>
@@ -901,6 +954,14 @@ document.write(`
         <span class="n">wp</span><span class="o">.</span><span class="n">capture_launch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">reset_graph</span><span class="p">)</span>
       <span class="k">else</span><span class="p">:</span>
         <span class="n">mjwarp</span><span class="o">.</span><span class="n">reset_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wp_model</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">wp_data</span><span class="p">,</span> <span class="n">reset</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_reset_mask_wp</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_notify_data_changed</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Simulation.add_data_listener">
+<a class="viewcode-back" href="../../../source/api/sim.html#mjlab.sim.Simulation.add_data_listener">[docs]</a>
+  <span class="k">def</span><span class="w"> </span><span class="nf">add_data_listener</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="kc">None</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Call ``fn`` whenever ``step()``, ``forward()`` or ``reset()`` changes data.&quot;&quot;&quot;</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">_data_listeners</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span></div>
+
 
 <div class="viewcode-block" id="Simulation.set_sensor_context">
 <a class="viewcode-back" href="../../../source/api/sim.html#mjlab.sim.Simulation.set_sensor_context">[docs]</a>
@@ -940,6 +1001,10 @@ document.write(`
 
   <span class="c1"># Private methods.</span>
 
+  <span class="k">def</span><span class="w"> </span><span class="nf">_notify_data_changed</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_listeners</span><span class="p">:</span>
+      <span class="n">fn</span><span class="p">()</span>
+
   <span class="k">def</span><span class="w"> </span><span class="nf">_sense_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;GPU kernel sequence for sensing (captured in sense_graph).&quot;&quot;&quot;</span>
     <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sensor_context</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
@@ -955,10 +1020,10 @@ document.write(`
     <span class="k">for</span> <span class="n">sensor</span> <span class="ow">in</span> <span class="n">ctx</span><span class="o">.</span><span class="n">raycast_sensors</span><span class="p">:</span>
       <span class="n">sensor</span><span class="o">.</span><span class="n">raycast_kernel</span><span class="p">(</span><span class="n">rc</span><span class="o">=</span><span class="n">rc</span><span class="p">)</span>
 
-  <span class="k">def</span><span class="w"> </span><span class="nf">_should_use_cuda_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Determine if CUDA graphs can be used based on device and driver version.&quot;&quot;&quot;</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">_can_capture_graphs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Whether Warp can capture graphs on this device.&quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">wp_device</span><span class="o">.</span><span class="n">is_cuda</span><span class="p">:</span>
-      <span class="k">return</span> <span class="kc">False</span>
+      <span class="k">return</span> <span class="kc">True</span>  <span class="c1"># Warp captures and replays on CPU too.</span>
 
     <span class="n">driver_ver</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">get_cuda_driver_version</span><span class="p">()</span>
     <span class="n">has_mempool</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">is_mempool_enabled</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wp_device</span><span class="p">)</span>
@@ -1025,7 +1090,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on May 15, 2026.
+  Last updated on Nov 27, 2026.
   <br/>
 </p>
   </div>

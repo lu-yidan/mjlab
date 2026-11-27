@@ -58,7 +58,7 @@
     <link rel="prev" title="Research" href="research.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="Nov 11, 2026"/>
+    <meta name="docbuild:last-update" content="Nov 27, 2026"/>
   </head>
   
   
@@ -195,6 +195,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="sensors/raycast_sensor.html">RayCast Sensor</a></li>
 <li class="toctree-l2"><a class="reference internal" href="sensors/rgbd_camera.html">RGB-D Camera</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sensors/tactile_sensor.html">Tactile Sensor</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="scene.html">Scene</a></li>
@@ -544,6 +545,8 @@ document.write(`
 <section id="added">
 <h3>Added<a class="headerlink" href="#added" title="Link to this heading">#</a></h3>
 <ul class="simple">
+<li><p>Added <code class="docutils literal notranslate"><span class="pre">play</span> <span class="pre">--checkpoint-file</span> <span class="pre">latest</span></code> to load the last checkpoint of the newest
+local run. Contribution by &#64;Kaweees.</p></li>
 <li><p>Added <code class="docutils literal notranslate"><span class="pre">GridPatternCfg.offset</span></code> to shift the ray grid in frame-local XY.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">GridPatternCfg.resolution</span></code> accepts a per-axis <code class="docutils literal notranslate"><span class="pre">(x,</span> <span class="pre">y)</span></code> tuple.</p></li>
 <li><p>Added a <code class="docutils literal notranslate"><span class="pre">cu126</span></code> extra (<code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">sync</span> <span class="pre">--extra</span> <span class="pre">cu126</span></code>) that installs torch built for
@@ -551,6 +554,9 @@ CUDA 12.6, for machines whose NVIDIA driver is older than 580. It does not inclu
 kernels for Blackwell GPUs.</p></li>
 <li><p>Added <code class="docutils literal notranslate"><span class="pre">SimulationCfg.graph_conditional</span></code> to toggle MuJoCo Warp’s CUDA graph
 conditional nodes, which require CUDA 12.4 or newer.</p></li>
+<li><p>Added <code class="docutils literal notranslate"><span class="pre">SimulationCfg.nccdmax</span></code> to set the number of convex collision detection
+contacts allocated per world separately from <code class="docutils literal notranslate"><span class="pre">nconmax</span></code>. Contribution by
+&#64;bd-pmorais.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">RslRlBaseRunnerCfg.logger</span></code> accepts the import path of an
 <code class="docutils literal notranslate"><span class="pre">rsl_rl.utils.LogWriter</span></code> subclass, e.g. <code class="docutils literal notranslate"><span class="pre">&quot;my_pkg.writers:MyLogWriter&quot;</span></code>.</p></li>
 <li><p>Added <code class="docutils literal notranslate"><span class="pre">RewardManager.term_rewards</span></code> and <code class="docutils literal notranslate"><span class="pre">RewardManager.get_term()</span></code> for the
@@ -559,11 +565,29 @@ per-term reward vector from the last step <a class="extlink-issue reference exte
 fields to the exported ONNX metadata by overriding it, and
 <code class="docutils literal notranslate"><span class="pre">MjlabOnPolicyRunner.export_onnx_on_save</span></code> to export ONNX on every checkpoint.
 The velocity, manipulation and tracking runners now share this export path.</p></li>
+<li><p>The Unitree G1 model limits ankle roll and pitch jointly, with fixed tendons that
+model the coupled mechanical stops of the push-rod ankle.</p></li>
 </ul>
 </section>
 <section id="changed">
 <h3>Changed<a class="headerlink" href="#changed" title="Link to this heading">#</a></h3>
 <ul class="simple">
+<li><p>Upgraded MuJoCo and MuJoCo Warp to 4.0.1. mjlab now depends on <code class="docutils literal notranslate"><span class="pre">mujoco-core</span></code>
+instead of <code class="docutils literal notranslate"><span class="pre">mujoco</span></code>. To upgrade an existing environment, run
+<code class="docutils literal notranslate"><span class="pre">uv</span> <span class="pre">sync</span> <span class="pre">--reinstall-package</span> <span class="pre">mujoco-core</span></code>: removing <code class="docutils literal notranslate"><span class="pre">mujoco</span></code> deletes files that
+<code class="docutils literal notranslate"><span class="pre">mujoco-core</span></code> shares with it.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">requires_model_fields</span></code> no longer takes <code class="docutils literal notranslate"><span class="pre">recompute</span></code>: the event manager infers
+which derived constants to recompute from the listed fields, using MuJoCo Warp’s
+<code class="docutils literal notranslate"><span class="pre">set_const</span></code> groups. <code class="docutils literal notranslate"><span class="pre">RecomputeLevel</span></code> is removed, and
+<code class="docutils literal notranslate"><span class="pre">sim.recompute_constants()</span></code> takes <code class="docutils literal notranslate"><span class="pre">mujoco_warp.SetConstGroup</span></code> flags.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dr.geom_size</span></code> now recomputes broadphase bounds with <code class="docutils literal notranslate"><span class="pre">set_const</span></code> after the event
+fires. Calling it directly no longer updates <code class="docutils literal notranslate"><span class="pre">geom_rbound</span></code> and <code class="docutils literal notranslate"><span class="pre">geom_aabb</span></code>.</p></li>
+<li><p>Regex keys in <code class="docutils literal notranslate"><span class="pre">init_state.joint_pos</span></code>/<code class="docutils literal notranslate"><span class="pre">joint_vel</span></code>, <code class="docutils literal notranslate"><span class="pre">posture_target</span></code> and spec
+config <code class="docutils literal notranslate"><span class="pre">*_names_expr</span></code> fields now match whole names, so <code class="docutils literal notranslate"><span class="pre">&quot;joint1&quot;</span></code> no longer
+matches <code class="docutils literal notranslate"><span class="pre">joint10</span></code>. Keys in <code class="docutils literal notranslate"><span class="pre">joint_pos</span></code>, <code class="docutils literal notranslate"><span class="pre">joint_vel</span></code> or <code class="docutils literal notranslate"><span class="pre">posture_target</span></code> that
+match no joint now raise. Contribution by &#64;saikishor.</p></li>
+<li><p>Tracking body velocity rewards rotate the reference by the anchor yaw offset and
+are renamed from <code class="docutils literal notranslate"><span class="pre">motion_global_body_*</span></code> to <code class="docutils literal notranslate"><span class="pre">motion_relative_body_*</span></code>.</p></li>
 <li><p>Heightfield terrains now lay hfield rows along y and columns along x, as MuJoCo
 expects. Non-square sub-terrains are no longer stretched with flat patches off the
 terrain; square ones are mirrored across x=y for a given seed.</p></li>
@@ -586,6 +610,34 @@ attribute of the <code class="docutils literal notranslate"><span class="pre">rs
 <section id="fixed">
 <h3>Fixed<a class="headerlink" href="#fixed" title="Link to this heading">#</a></h3>
 <ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">project_points()</span></code> now keeps the leading dimension for a batch of one and
+returns unbatched projections without an extra dimension.</p></li>
+<li><p>YAM RGB and depth cube-lifting tasks now use separate experiment directories,
+<code class="docutils literal notranslate"><span class="pre">yam_lift_cube_rgb</span></code> and <code class="docutils literal notranslate"><span class="pre">yam_lift_cube_depth</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">EntityData.gravity_vec_w</span></code> now initializes from normalized model gravity, so
+orientation observations, rewards, and terminations respect tilted gravity
+<a class="extlink-issue reference external" href="https://github.com/mujocolab/mjlab/issues/1318">#1318</a>.</p></li>
+<li><p>Domain randomization of body poses, centers of mass, masses and <code class="docutils literal notranslate"><span class="pre">qpos0</span></code> now keeps
+equality constraint anchors (<code class="docutils literal notranslate"><span class="pre">eq_data</span></code>) and tracking camera and light references
+per world. Previously every world used world 0’s values.</p></li>
+<li><p>Randomizing <code class="docutils literal notranslate"><span class="pre">geom_size</span></code>, <code class="docutils literal notranslate"><span class="pre">geom_pos</span></code>, <code class="docutils literal notranslate"><span class="pre">geom_quat</span></code> or <code class="docutils literal notranslate"><span class="pre">site_pos</span></code> in models
+with spatial tendons now recomputes tendon rest lengths and inverse weights, and
+randomizing <code class="docutils literal notranslate"><span class="pre">site_pos</span></code> or <code class="docutils literal notranslate"><span class="pre">site_quat</span></code> with site transmission actuators now
+recomputes <code class="docutils literal notranslate"><span class="pre">actuator_acc0</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dr.cam_pos</span></code>, <code class="docutils literal notranslate"><span class="pre">dr.cam_quat</span></code>, <code class="docutils literal notranslate"><span class="pre">dr.light_pos</span></code> and <code class="docutils literal notranslate"><span class="pre">dr.light_dir</span></code> now update
+tracking cameras and lights, and viewers show them at each world’s pose.</p></li>
+<li><p>DR terms that list <code class="docutils literal notranslate"><span class="pre">jnt_pos</span></code> or <code class="docutils literal notranslate"><span class="pre">jnt_axis</span></code> in <code class="docutils literal notranslate"><span class="pre">requires_model_fields</span></code> now
+recompute the derived inertia constants.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BuiltinPdActuator</span></code> now sends position and velocity targets to the right
+elements when <code class="docutils literal notranslate"><span class="pre">EntityCfg.sort_actuators=True</span></code>. Contribution by &#64;saikishor.</p></li>
+<li><p>Observations no longer read sensor data cached before the <code class="docutils literal notranslate"><span class="pre">forward()</span></code> at the
+end of <code class="docutils literal notranslate"><span class="pre">step()</span></code>, which made contact observations depend on whether another
+environment reset that step. The simulation now invalidates sensor caches
+whenever its data changes. Reported by &#64;Chr0mium24 in <a class="extlink-issue reference external" href="https://github.com/mujocolab/mjlab/issues/1309">#1309</a>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">export-scene</span></code> no longer deletes a non-empty <code class="docutils literal notranslate"><span class="pre">--output-dir</span></code>. Pass
+<code class="docutils literal notranslate"><span class="pre">--overwrite</span> <span class="pre">True</span></code> to replace a previous export. Contribution by &#64;saikishor.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">upright</span></code> now uses the root body when <code class="docutils literal notranslate"><span class="pre">asset_cfg</span></code> selects no bodies, instead
+of raising a shape error on multi-body entities. Contribution by &#64;yunyv.</p></li>
 <li><p>Delayed position actuators now hold the post-reset joint positions until the
 first action arrives, instead of driving toward 0 for their first <code class="docutils literal notranslate"><span class="pre">lag</span></code>
 physics steps after every reset. Targets set during the reset are kept.</p></li>
@@ -1245,9 +1297,9 @@ damping (<code class="docutils literal notranslate"><span class="pre">f</span> <
 used by position and velocity actuators. Maps to <code class="docutils literal notranslate"><span class="pre">&lt;joint</span> <span class="pre">damping&gt;</span></code> for
 JOINT transmission and <code class="docutils literal notranslate"><span class="pre">&lt;tendon</span> <span class="pre">damping&gt;</span></code> for TENDON transmission.
 Defaults to <code class="docutils literal notranslate"><span class="pre">None</span></code> (preserves the XML value).</p></li>
-<li><p>Added <code class="xref py py-class docutils literal notranslate"><span class="pre">RecorderManager</span></code> for logging observations,
+<li><p>Added <a class="reference internal" href="api/managers.html#mjlab.managers.RecorderManager" title="mjlab.managers.RecorderManager"><code class="xref py py-class docutils literal notranslate"><span class="pre">RecorderManager</span></code></a> for logging observations,
 actions, or arbitrary environment data during rollouts. Implement a
-<code class="xref py py-class docutils literal notranslate"><span class="pre">RecorderTerm</span></code> subclass and register it in the
+<a class="reference internal" href="api/managers.html#mjlab.managers.RecorderTerm" title="mjlab.managers.RecorderTerm"><code class="xref py py-class docutils literal notranslate"><span class="pre">RecorderTerm</span></code></a> subclass and register it in the
 <code class="docutils literal notranslate"><span class="pre">recorders</span></code> dict on <code class="docutils literal notranslate"><span class="pre">ManagerBasedRlEnvCfg</span></code>. The manager provides
 <code class="docutils literal notranslate"><span class="pre">record_pre_reset</span></code>, <code class="docutils literal notranslate"><span class="pre">record_post_reset</span></code>, and <code class="docutils literal notranslate"><span class="pre">record_post_step</span></code>
 lifecycle hooks with no opinion on how data is stored.</p></li>
@@ -1847,7 +1899,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on Nov 11, 2026.
+  Last updated on Nov 27, 2026.
   <br/>
 </p>
   </div>

@@ -56,7 +56,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="May 15, 2026"/>
+    <meta name="docbuild:last-update" content="Nov 27, 2026"/>
   </head>
   
   
@@ -195,6 +195,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/tactile_sensor.html">Tactile Sensor</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../source/scene.html">Scene</a></li>
@@ -413,7 +414,6 @@ document.write(`
 <span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tuple</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">mujoco</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
@@ -425,30 +425,19 @@ document.write(`
 <span class="p">)</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.terrains.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_border</span><span class="p">,</span> <span class="n">make_plane</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.utils.color</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
-  <span class="n">HSV</span><span class="p">,</span>
   <span class="n">brand_ramp</span><span class="p">,</span>
-  <span class="n">clamp</span><span class="p">,</span>
   <span class="n">darken_rgba</span><span class="p">,</span>
-  <span class="n">hsv_to_rgb</span><span class="p">,</span>
-  <span class="n">rgb_to_hsv</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="n">_MUJOCO_BLUE</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.20</span><span class="p">,</span> <span class="mf">0.45</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">)</span>
 <span class="n">_MUJOCO_RED</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.90</span><span class="p">,</span> <span class="mf">0.30</span><span class="p">,</span> <span class="mf">0.30</span><span class="p">)</span>
 <span class="n">_MUJOCO_GREEN</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.25</span><span class="p">,</span> <span class="mf">0.80</span><span class="p">,</span> <span class="mf">0.45</span><span class="p">)</span>
 
-
-<span class="k">def</span><span class="w"> </span><span class="nf">_get_platform_color</span><span class="p">(</span>
-  <span class="n">base_rgb</span><span class="p">:</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
-  <span class="n">desaturation_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.4</span><span class="p">,</span>
-  <span class="n">lightening_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.25</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
-  <span class="n">hsv</span> <span class="o">=</span> <span class="n">rgb_to_hsv</span><span class="p">(</span><span class="n">base_rgb</span><span class="p">)</span>
-  <span class="n">new_s</span> <span class="o">=</span> <span class="n">hsv</span><span class="o">.</span><span class="n">s</span> <span class="o">*</span> <span class="n">desaturation_factor</span>
-  <span class="n">new_v</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="n">hsv</span><span class="o">.</span><span class="n">v</span> <span class="o">+</span> <span class="n">lightening_factor</span><span class="p">)</span>
-  <span class="n">new_hsv</span> <span class="o">=</span> <span class="n">HSV</span><span class="p">(</span><span class="n">hsv</span><span class="o">.</span><span class="n">h</span><span class="p">,</span> <span class="n">new_s</span><span class="p">,</span> <span class="n">new_v</span><span class="p">)</span>
-  <span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span> <span class="o">=</span> <span class="n">hsv_to_rgb</span><span class="p">(</span><span class="n">new_hsv</span><span class="p">)</span>
-  <span class="k">return</span> <span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">g</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+<span class="c1"># Minimum vertical extent of a flat border frame, in meters. The border top sits</span>
+<span class="c1"># flush at z=0 and extends downward, so this depth is not visible from above; it</span>
+<span class="c1"># only guarantees the frame is solid (never a degenerate zero-height geom) when</span>
+<span class="c1"># the step height collapses to zero at difficulty 0.</span>
+<span class="n">_MIN_BORDER_HEIGHT</span> <span class="o">=</span> <span class="mf">0.05</span>
 
 
 <div class="viewcode-block" id="BoxFlatTerrainCfg">
@@ -519,13 +508,18 @@ document.write(`
     <span class="n">border_rgba</span> <span class="o">=</span> <span class="n">darken_rgba</span><span class="p">(</span><span class="n">first_step_rgba</span><span class="p">,</span> <span class="mf">0.85</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">holes</span><span class="p">:</span>
-      <span class="n">border_center</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="n">step_height</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+      <span class="c1"># Decouple the border&#39;s vertical extent from step_height so difficulty 0</span>
+      <span class="c1"># (step_height == 0) still produces a solid, gap-free frame instead of</span>
+      <span class="c1"># being skipped or generating degenerate zero-height geoms. The top stays</span>
+      <span class="c1"># flush with the ground at z=0.</span>
+      <span class="n">border_height</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">step_height</span><span class="p">,</span> <span class="n">_MIN_BORDER_HEIGHT</span><span class="p">)</span>
+      <span class="n">border_center</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="n">border_height</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
       <span class="n">border_inner_size</span> <span class="o">=</span> <span class="p">(</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span><span class="p">,</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span><span class="p">,</span>
       <span class="p">)</span>
       <span class="n">border_boxes</span> <span class="o">=</span> <span class="n">make_border</span><span class="p">(</span>
-        <span class="n">body</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">border_inner_size</span><span class="p">,</span> <span class="n">step_height</span><span class="p">,</span> <span class="n">border_center</span>
+        <span class="n">body</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">border_inner_size</span><span class="p">,</span> <span class="n">border_height</span><span class="p">,</span> <span class="n">border_center</span>
       <span class="p">)</span>
       <span class="n">boxes</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">border_boxes</span><span class="p">)</span>
       <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">border_boxes</span><span class="p">)):</span>
@@ -698,13 +692,16 @@ document.write(`
     <span class="n">border_rgba</span> <span class="o">=</span> <span class="n">darken_rgba</span><span class="p">(</span><span class="n">first_step_rgba</span><span class="p">,</span> <span class="mf">0.85</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span> <span class="o">&gt;</span> <span class="mf">0.0</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">holes</span><span class="p">:</span>
-      <span class="n">border_center</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">step_height</span><span class="p">)</span>
+      <span class="c1"># See BoxPyramidStairsTerrainCfg: keep the border solid and flush at z=0</span>
+      <span class="c1"># even when step_height collapses to 0 at difficulty 0.</span>
+      <span class="n">border_height</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">step_height</span><span class="p">,</span> <span class="n">_MIN_BORDER_HEIGHT</span><span class="p">)</span>
+      <span class="n">border_center</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">border_height</span><span class="p">)</span>
       <span class="n">border_inner_size</span> <span class="o">=</span> <span class="p">(</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span><span class="p">,</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span><span class="p">,</span>
       <span class="p">)</span>
       <span class="n">border_boxes</span> <span class="o">=</span> <span class="n">make_border</span><span class="p">(</span>
-        <span class="n">body</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">border_inner_size</span><span class="p">,</span> <span class="n">step_height</span><span class="p">,</span> <span class="n">border_center</span>
+        <span class="n">body</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">border_inner_size</span><span class="p">,</span> <span class="n">border_height</span><span class="p">,</span> <span class="n">border_center</span>
       <span class="p">)</span>
       <span class="n">boxes</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">border_boxes</span><span class="p">)</span>
       <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">border_boxes</span><span class="p">)):</span>
@@ -970,8 +967,7 @@ document.write(`
       <span class="n">pos</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">platform_center_z</span><span class="p">),</span>
     <span class="p">)</span>
     <span class="n">boxes_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">box</span><span class="p">)</span>
-    <span class="n">platform_rgba</span> <span class="o">=</span> <span class="n">_get_platform_color</span><span class="p">(</span><span class="n">_MUJOCO_GREEN</span><span class="p">)</span>
-    <span class="n">box_colors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">platform_rgba</span><span class="p">)</span>
+    <span class="n">box_colors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">brand_ramp</span><span class="p">(</span><span class="n">_MUJOCO_GREEN</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">))</span>
 
     <span class="n">origin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">grid_height</span><span class="p">])</span>
 
@@ -1000,6 +996,22 @@ document.write(`
     <span class="n">half_border_width</span> <span class="o">=</span> <span class="n">border_width</span> <span class="o">/</span> <span class="mi">2</span>
     <span class="n">neg_half_terrain</span> <span class="o">=</span> <span class="o">-</span><span class="n">terrain_height</span> <span class="o">/</span> <span class="mi">2</span>
 
+    <span class="c1"># Mark cells under the center platform as visited so they are never emitted</span>
+    <span class="c1"># or merged; the platform box covers that region and would otherwise z-fight</span>
+    <span class="c1"># with the cells beneath it.</span>
+    <span class="n">platform_half</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">platform_width</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">terrain_center</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">platform_min</span> <span class="o">=</span> <span class="n">terrain_center</span> <span class="o">-</span> <span class="n">platform_half</span>
+    <span class="n">platform_max</span> <span class="o">=</span> <span class="n">terrain_center</span> <span class="o">+</span> <span class="n">platform_half</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_boxes_x</span><span class="p">):</span>
+      <span class="n">cx</span> <span class="o">=</span> <span class="n">half_border_width</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_width</span>
+      <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">platform_min</span> <span class="o">&lt;=</span> <span class="n">cx</span> <span class="o">&lt;=</span> <span class="n">platform_max</span><span class="p">):</span>
+        <span class="k">continue</span>
+      <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_boxes_y</span><span class="p">):</span>
+        <span class="n">cy</span> <span class="o">=</span> <span class="n">half_border_width</span> <span class="o">+</span> <span class="p">(</span><span class="n">j</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_width</span>
+        <span class="k">if</span> <span class="n">platform_min</span> <span class="o">&lt;=</span> <span class="n">cy</span> <span class="o">&lt;=</span> <span class="n">platform_max</span><span class="p">:</span>
+          <span class="n">visited</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+
     <span class="c1"># Quantize heights to create more merging opportunities</span>
     <span class="n">quantized_heights</span> <span class="o">=</span> <span class="p">(</span>
       <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">height_map</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">height_merge_threshold</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">height_merge_threshold</span>
@@ -1013,7 +1025,12 @@ document.write(`
         <span class="c1"># Find rectangular region with similar height</span>
         <span class="n">height</span> <span class="o">=</span> <span class="n">quantized_heights</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>
 
-        <span class="n">normalized_height</span> <span class="o">=</span> <span class="p">(</span><span class="n">height</span> <span class="o">+</span> <span class="n">grid_height</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">grid_height</span><span class="p">)</span>
+        <span class="c1"># grid_height == 0 (difficulty 0) means a flat grid; use the midpoint</span>
+        <span class="c1"># color and avoid dividing by zero.</span>
+        <span class="k">if</span> <span class="n">grid_height</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+          <span class="n">normalized_height</span> <span class="o">=</span> <span class="p">(</span><span class="n">height</span> <span class="o">+</span> <span class="n">grid_height</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">grid_height</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="n">normalized_height</span> <span class="o">=</span> <span class="mf">0.5</span>
         <span class="n">t</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">normalized_height</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))</span>
         <span class="n">rgba</span> <span class="o">=</span> <span class="n">brand_ramp</span><span class="p">(</span><span class="n">_MUJOCO_GREEN</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
 
@@ -1078,14 +1095,10 @@ document.write(`
     <span class="n">half_border_width</span> <span class="o">=</span> <span class="n">border_width</span> <span class="o">/</span> <span class="mi">2</span>
     <span class="n">neg_half_terrain</span> <span class="o">=</span> <span class="o">-</span><span class="n">terrain_height</span> <span class="o">/</span> <span class="mi">2</span>
 
-    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">holes</span><span class="p">:</span>
-      <span class="n">platform_half</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">platform_width</span> <span class="o">/</span> <span class="mi">2</span>
-      <span class="n">terrain_center</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span>
-      <span class="n">platform_min</span> <span class="o">=</span> <span class="n">terrain_center</span> <span class="o">-</span> <span class="n">platform_half</span>
-      <span class="n">platform_max</span> <span class="o">=</span> <span class="n">terrain_center</span> <span class="o">+</span> <span class="n">platform_half</span>
-    <span class="k">else</span><span class="p">:</span>
-      <span class="n">platform_min</span> <span class="o">=</span> <span class="kc">None</span>
-      <span class="n">platform_max</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">platform_half</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">platform_width</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">terrain_center</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">platform_min</span> <span class="o">=</span> <span class="n">terrain_center</span> <span class="o">-</span> <span class="n">platform_half</span>
+    <span class="n">platform_max</span> <span class="o">=</span> <span class="n">terrain_center</span> <span class="o">+</span> <span class="n">platform_half</span>
 
     <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_boxes_x</span><span class="p">):</span>
       <span class="n">box_center_x</span> <span class="o">=</span> <span class="n">half_border_width</span> <span class="o">+</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_width</span>
@@ -1103,11 +1116,24 @@ document.write(`
           <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">in_x_strip</span> <span class="ow">or</span> <span class="n">in_y_strip</span><span class="p">):</span>
             <span class="k">continue</span>
 
+        <span class="c1"># Skip cells under the center platform so the platform is the only</span>
+        <span class="c1"># geometry there. Otherwise the platform box sits on top of these cells</span>
+        <span class="c1"># and the coplanar faces z-fight.</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">platform_min</span> <span class="o">&lt;=</span> <span class="n">box_center_x</span> <span class="o">&lt;=</span> <span class="n">platform_max</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+          <span class="n">platform_min</span> <span class="o">&lt;=</span> <span class="n">box_center_y</span> <span class="o">&lt;=</span> <span class="n">platform_max</span>
+        <span class="p">):</span>
+          <span class="k">continue</span>
+
         <span class="n">height_noise</span> <span class="o">=</span> <span class="n">height_map</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>
         <span class="n">box_height</span> <span class="o">=</span> <span class="n">terrain_height</span> <span class="o">+</span> <span class="n">height_noise</span>
         <span class="n">box_center_z</span> <span class="o">=</span> <span class="n">neg_half_terrain</span> <span class="o">+</span> <span class="n">height_noise</span> <span class="o">/</span> <span class="mi">2</span>
 
-        <span class="n">normalized_height</span> <span class="o">=</span> <span class="p">(</span><span class="n">height_noise</span> <span class="o">+</span> <span class="n">grid_height</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">grid_height</span><span class="p">)</span>
+        <span class="c1"># grid_height == 0 (difficulty 0) means a flat grid; use the midpoint</span>
+        <span class="c1"># color and avoid dividing by zero.</span>
+        <span class="k">if</span> <span class="n">grid_height</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+          <span class="n">normalized_height</span> <span class="o">=</span> <span class="p">(</span><span class="n">height_noise</span> <span class="o">+</span> <span class="n">grid_height</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">grid_height</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+          <span class="n">normalized_height</span> <span class="o">=</span> <span class="mf">0.5</span>
         <span class="n">t</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">normalized_height</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">))</span>
         <span class="n">rgba</span> <span class="o">=</span> <span class="n">brand_ramp</span><span class="p">(</span><span class="n">_MUJOCO_GREEN</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
         <span class="n">box_colors</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rgba</span><span class="p">)</span>
@@ -1174,13 +1200,17 @@ document.write(`
       <span class="p">)</span>
       <span class="n">geometries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TerrainGeometry</span><span class="p">(</span><span class="n">geom</span><span class="o">=</span><span class="n">floor_geom</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="p">(</span><span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)))</span>
 
-    <span class="c1"># Platform</span>
-    <span class="n">platform_geom</span> <span class="o">=</span> <span class="n">body</span><span class="o">.</span><span class="n">add_geom</span><span class="p">(</span>
-      <span class="nb">type</span><span class="o">=</span><span class="n">mujoco</span><span class="o">.</span><span class="n">mjtGeom</span><span class="o">.</span><span class="n">mjGEOM_BOX</span><span class="p">,</span>
-      <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">platform_width</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">platform_width</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">terrain_height</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span>
-      <span class="n">pos</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="n">terrain_height</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span>
-    <span class="p">)</span>
-    <span class="n">geometries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TerrainGeometry</span><span class="p">(</span><span class="n">geom</span><span class="o">=</span><span class="n">platform_geom</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="p">(</span><span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)))</span>
+    <span class="c1"># Center platform. When a floor is present it already provides flat ground at</span>
+    <span class="c1"># z=0 across the (box-free) center, so an extra platform box would only</span>
+    <span class="c1"># duplicate that surface and z-fight with the floor. Add the platform only</span>
+    <span class="c1"># when there is no floor, where it is the sole ground at the spawn point.</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_floor</span><span class="p">:</span>
+      <span class="n">platform_geom</span> <span class="o">=</span> <span class="n">body</span><span class="o">.</span><span class="n">add_geom</span><span class="p">(</span>
+        <span class="nb">type</span><span class="o">=</span><span class="n">mujoco</span><span class="o">.</span><span class="n">mjtGeom</span><span class="o">.</span><span class="n">mjGEOM_BOX</span><span class="p">,</span>
+        <span class="n">size</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">platform_width</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">platform_width</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">terrain_height</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="n">pos</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="n">terrain_height</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span>
+      <span class="p">)</span>
+      <span class="n">geometries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TerrainGeometry</span><span class="p">(</span><span class="n">geom</span><span class="o">=</span><span class="n">platform_geom</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="p">(</span><span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)))</span>
 
     <span class="n">platform_half</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">platform_width</span> <span class="o">/</span> <span class="mi">2</span>
     <span class="n">terrain_center</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span>
@@ -1276,13 +1306,15 @@ document.write(`
     <span class="n">border_rgba</span> <span class="o">=</span> <span class="n">darken_rgba</span><span class="p">(</span><span class="n">first_step_rgba</span><span class="p">,</span> <span class="mf">0.85</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
-      <span class="n">border_center</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="n">step_height</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+      <span class="c1"># Keep the border solid and flush at z=0 even if step_height is 0.</span>
+      <span class="n">border_height</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">step_height</span><span class="p">,</span> <span class="n">_MIN_BORDER_HEIGHT</span><span class="p">)</span>
+      <span class="n">border_center</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="o">-</span><span class="n">border_height</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
       <span class="n">border_inner_size</span> <span class="o">=</span> <span class="p">(</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span><span class="p">,</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span><span class="p">,</span>
       <span class="p">)</span>
       <span class="n">border_boxes</span> <span class="o">=</span> <span class="n">make_border</span><span class="p">(</span>
-        <span class="n">body</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">border_inner_size</span><span class="p">,</span> <span class="n">step_height</span><span class="p">,</span> <span class="n">border_center</span>
+        <span class="n">body</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">border_inner_size</span><span class="p">,</span> <span class="n">border_height</span><span class="p">,</span> <span class="n">border_center</span>
       <span class="p">)</span>
       <span class="k">for</span> <span class="n">box</span> <span class="ow">in</span> <span class="n">border_boxes</span><span class="p">:</span>
         <span class="n">geometries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TerrainGeometry</span><span class="p">(</span><span class="n">geom</span><span class="o">=</span><span class="n">box</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">border_rgba</span><span class="p">))</span>
@@ -1578,7 +1610,12 @@ document.write(`
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">kw_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">BoxSteppingStonesTerrainCfg</span><span class="p">(</span><span class="n">SubTerrainCfg</span><span class="p">):</span>
   <span class="n">stone_size_range</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.4</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">)</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Max and min stone side length, in meters. Stones shrink from the max toward</span>
+<span class="sd">  the min as difficulty increases, which widens the gaps between them.&quot;&quot;&quot;</span>
   <span class="n">stone_distance_range</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Gap between stones, in meters. The lower bound seeds the (fixed) grid</span>
+<span class="sd">  density; the gap itself grows with difficulty as the stones shrink, so the</span>
+<span class="sd">  upper bound is no longer used directly.&quot;&quot;&quot;</span>
   <span class="n">stone_height</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span>
   <span class="n">stone_height_variation</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span>
   <span class="n">stone_size_variation</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span>
@@ -1600,23 +1637,56 @@ document.write(`
     <span class="n">displacement_range</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">displacement_range</span> <span class="o">*</span> <span class="n">difficulty</span>
     <span class="n">stone_height_variation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stone_height_variation</span> <span class="o">*</span> <span class="n">difficulty</span>
 
-    <span class="c1"># Increase distance between stones with difficulty.</span>
-    <span class="n">d_low</span><span class="p">,</span> <span class="n">d_high</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stone_distance_range</span>
-    <span class="n">avg_distance</span> <span class="o">=</span> <span class="n">d_low</span> <span class="o">+</span> <span class="n">difficulty</span> <span class="o">*</span> <span class="p">(</span><span class="n">d_high</span> <span class="o">-</span> <span class="n">d_low</span><span class="p">)</span>
-
-    <span class="c1"># Decrease stone size with difficulty (larger stones are easier).</span>
+    <span class="c1"># Decrease stone size with difficulty (larger stones are easier). With the</span>
+    <span class="c1"># grid pitch held fixed (below), shrinking stones means the gaps between them</span>
+    <span class="c1"># grow, which is the actual difficulty curriculum.</span>
     <span class="n">s_min</span><span class="p">,</span> <span class="n">s_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">stone_size_range</span>
     <span class="n">avg_stone_size</span> <span class="o">=</span> <span class="n">s_max</span> <span class="o">-</span> <span class="n">difficulty</span> <span class="o">*</span> <span class="p">(</span><span class="n">s_max</span> <span class="o">-</span> <span class="n">s_min</span><span class="p">)</span>
-    <span class="n">spacing</span> <span class="o">=</span> <span class="n">avg_stone_size</span> <span class="o">+</span> <span class="n">avg_distance</span>
 
-    <span class="c1"># Aggressive grid density to reach borders.</span>
+    <span class="c1"># Difficulty-INDEPENDENT grid. The count and pitch are fixed across difficulty</span>
+    <span class="c1"># so the layout never re-tiles (previously, num = floor(inner / spacing) + 1</span>
+    <span class="c1"># jumped by one as the difficulty-varying spacing crossed an integer boundary,</span>
+    <span class="c1"># shifting every stone at once). The pitch exactly spans the inner region so</span>
+    <span class="c1"># edge stones always reach the borders. Density is seeded by the tightest</span>
+    <span class="c1"># nominal spacing (largest stones + smallest gap).</span>
     <span class="n">inner_w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span>
     <span class="n">inner_h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span>
-    <span class="n">num_x</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">inner_w</span> <span class="o">/</span> <span class="n">spacing</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span>
-    <span class="n">num_y</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">inner_h</span> <span class="o">/</span> <span class="n">spacing</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">nominal_spacing</span> <span class="o">=</span> <span class="n">s_max</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">stone_distance_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">num_x</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">inner_w</span> <span class="o">/</span> <span class="n">nominal_spacing</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">num_y</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">inner_h</span> <span class="o">/</span> <span class="n">nominal_spacing</span><span class="p">))</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">pitch_x</span> <span class="o">=</span> <span class="n">inner_w</span> <span class="o">/</span> <span class="p">(</span><span class="n">num_x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">pitch_y</span> <span class="o">=</span> <span class="n">inner_h</span> <span class="o">/</span> <span class="p">(</span><span class="n">num_y</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
 
-    <span class="n">offset_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span> <span class="o">+</span> <span class="p">(</span><span class="n">inner_w</span> <span class="o">-</span> <span class="p">(</span><span class="n">num_x</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">spacing</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
-    <span class="n">offset_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span> <span class="o">+</span> <span class="p">(</span><span class="n">inner_h</span> <span class="o">-</span> <span class="p">(</span><span class="n">num_y</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">spacing</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="c1"># Inter-stone gap (grows with difficulty as stones shrink).</span>
+    <span class="n">gap_x</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">pitch_x</span> <span class="o">-</span> <span class="n">avg_stone_size</span><span class="p">)</span>
+    <span class="n">gap_y</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">pitch_y</span> <span class="o">-</span> <span class="n">avg_stone_size</span><span class="p">)</span>
+
+    <span class="c1"># Snap the central platform out to the grid. It is at least the configured</span>
+    <span class="c1"># width and reaches to exactly one gap before the nearest *full* stone, so the</span>
+    <span class="c1"># ring of stones around it are whole (no clipped slivers that pop in and out</span>
+    <span class="c1"># with difficulty) and sit one consistent gap away. The platform simply</span>
+    <span class="c1"># absorbs the stones that would otherwise be partially under it.</span>
+    <span class="n">center_x</span><span class="p">,</span> <span class="n">center_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">half_stone</span> <span class="o">=</span> <span class="n">avg_stone_size</span> <span class="o">/</span> <span class="mi">2</span>
+    <span class="n">a0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">platform_width</span> <span class="o">/</span> <span class="mi">2</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_snapped_half</span><span class="p">(</span><span class="n">center</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">pitch</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">gap</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">num</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+      <span class="c1"># Nearest grid stone that can stay full while the platform is &gt;= a0 wide.</span>
+      <span class="n">threshold</span> <span class="o">=</span> <span class="n">center</span> <span class="o">+</span> <span class="n">a0</span> <span class="o">+</span> <span class="n">half_stone</span> <span class="o">+</span> <span class="n">gap</span>
+      <span class="n">i_keep</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">num</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">((</span><span class="n">threshold</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span><span class="p">)</span> <span class="o">/</span> <span class="n">pitch</span><span class="p">)))</span>
+      <span class="n">c_keep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span> <span class="o">+</span> <span class="n">i_keep</span> <span class="o">*</span> <span class="n">pitch</span>
+      <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">a0</span><span class="p">,</span> <span class="n">c_keep</span> <span class="o">-</span> <span class="n">half_stone</span> <span class="o">-</span> <span class="n">gap</span> <span class="o">-</span> <span class="n">center</span><span class="p">)</span>
+
+    <span class="n">platform_half_x</span> <span class="o">=</span> <span class="n">_snapped_half</span><span class="p">(</span><span class="n">center_x</span><span class="p">,</span> <span class="n">pitch_x</span><span class="p">,</span> <span class="n">gap_x</span><span class="p">,</span> <span class="n">num_x</span><span class="p">)</span>
+    <span class="n">platform_half_y</span> <span class="o">=</span> <span class="n">_snapped_half</span><span class="p">(</span><span class="n">center_y</span><span class="p">,</span> <span class="n">pitch_y</span><span class="p">,</span> <span class="n">gap_y</span><span class="p">,</span> <span class="n">num_y</span><span class="p">)</span>
+    <span class="n">platform_min_x</span><span class="p">,</span> <span class="n">platform_max_x</span> <span class="o">=</span> <span class="p">(</span>
+      <span class="n">center_x</span> <span class="o">-</span> <span class="n">platform_half_x</span><span class="p">,</span>
+      <span class="n">center_x</span> <span class="o">+</span> <span class="n">platform_half_x</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">platform_min_y</span><span class="p">,</span> <span class="n">platform_max_y</span> <span class="o">=</span> <span class="p">(</span>
+      <span class="n">center_y</span> <span class="o">-</span> <span class="n">platform_half_y</span><span class="p">,</span>
+      <span class="n">center_y</span> <span class="o">+</span> <span class="n">platform_half_y</span><span class="p">,</span>
+    <span class="p">)</span>
 
     <span class="n">border_rgba</span> <span class="o">=</span> <span class="n">darken_rgba</span><span class="p">(</span><span class="n">brand_ramp</span><span class="p">(</span><span class="n">_MUJOCO_GREEN</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="mf">0.85</span><span class="p">)</span>
     <span class="n">z_center</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stone_height</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">floor_depth</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
@@ -1643,24 +1713,19 @@ document.write(`
     <span class="p">)</span>
     <span class="n">geometries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">TerrainGeometry</span><span class="p">(</span><span class="n">geom</span><span class="o">=</span><span class="n">floor_geom</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)))</span>
 
-    <span class="c1"># Platform Column.</span>
+    <span class="c1"># Platform Column (grid-snapped, see above).</span>
     <span class="n">platform_geom</span> <span class="o">=</span> <span class="n">body</span><span class="o">.</span><span class="n">add_geom</span><span class="p">(</span>
       <span class="nb">type</span><span class="o">=</span><span class="n">mujoco</span><span class="o">.</span><span class="n">mjtGeom</span><span class="o">.</span><span class="n">mjGEOM_BOX</span><span class="p">,</span>
       <span class="n">size</span><span class="o">=</span><span class="p">(</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">platform_width</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">platform_width</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">platform_half_x</span><span class="p">),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">platform_half_y</span><span class="p">),</span>
         <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">half_height</span><span class="p">),</span>
       <span class="p">),</span>
-      <span class="n">pos</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">z_center</span><span class="p">),</span>
+      <span class="n">pos</span><span class="o">=</span><span class="p">(</span><span class="n">center_x</span><span class="p">,</span> <span class="n">center_y</span><span class="p">,</span> <span class="n">z_center</span><span class="p">),</span>
     <span class="p">)</span>
     <span class="n">geometries</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
       <span class="n">TerrainGeometry</span><span class="p">(</span><span class="n">geom</span><span class="o">=</span><span class="n">platform_geom</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">brand_ramp</span><span class="p">(</span><span class="n">_MUJOCO_GREEN</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">))</span>
     <span class="p">)</span>
-
-    <span class="n">platform_half</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">platform_width</span> <span class="o">/</span> <span class="mi">2</span>
-    <span class="n">terrain_center</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span>
-    <span class="n">platform_min</span> <span class="o">=</span> <span class="n">terrain_center</span> <span class="o">-</span> <span class="n">platform_half</span>
-    <span class="n">platform_max</span> <span class="o">=</span> <span class="n">terrain_center</span> <span class="o">+</span> <span class="n">platform_half</span>
 
     <span class="n">inner_min_x</span><span class="p">,</span> <span class="n">inner_max_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span>
     <span class="n">inner_min_y</span><span class="p">,</span> <span class="n">inner_max_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span>
@@ -1669,12 +1734,17 @@ document.write(`
       <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_y</span><span class="p">):</span>
         <span class="n">base_size</span> <span class="o">=</span> <span class="n">avg_stone_size</span>
 
-        <span class="c1"># Proposed position with displacement.</span>
+        <span class="c1"># Proposed position on the fixed grid with random displacement. Centers</span>
+        <span class="c1"># span border to (size - border), so edge stones reach the borders.</span>
         <span class="n">px</span> <span class="o">=</span> <span class="p">(</span>
-          <span class="n">offset_x</span> <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">spacing</span> <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="n">displacement_range</span><span class="p">,</span> <span class="n">displacement_range</span><span class="p">)</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span>
+          <span class="o">+</span> <span class="n">i</span> <span class="o">*</span> <span class="n">pitch_x</span>
+          <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="n">displacement_range</span><span class="p">,</span> <span class="n">displacement_range</span><span class="p">)</span>
         <span class="p">)</span>
         <span class="n">py</span> <span class="o">=</span> <span class="p">(</span>
-          <span class="n">offset_y</span> <span class="o">+</span> <span class="n">j</span> <span class="o">*</span> <span class="n">spacing</span> <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="n">displacement_range</span><span class="p">,</span> <span class="n">displacement_range</span><span class="p">)</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span>
+          <span class="o">+</span> <span class="n">j</span> <span class="o">*</span> <span class="n">pitch_y</span>
+          <span class="o">+</span> <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="n">displacement_range</span><span class="p">,</span> <span class="n">displacement_range</span><span class="p">)</span>
         <span class="p">)</span>
 
         <span class="c1"># Randomized size.</span>
@@ -1685,10 +1755,11 @@ document.write(`
         <span class="n">x_min</span><span class="p">,</span> <span class="n">x_max</span> <span class="o">=</span> <span class="n">px</span> <span class="o">-</span> <span class="n">size_x</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">px</span> <span class="o">+</span> <span class="n">size_x</span> <span class="o">/</span> <span class="mi">2</span>
         <span class="n">y_min</span><span class="p">,</span> <span class="n">y_max</span> <span class="o">=</span> <span class="n">py</span> <span class="o">-</span> <span class="n">size_y</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">py</span> <span class="o">+</span> <span class="n">size_y</span> <span class="o">/</span> <span class="mi">2</span>
 
-        <span class="c1"># Skip stones centered inside the platform. Stones whose edges</span>
-        <span class="c1"># extend under the platform are kept; the platform covers the overlap.</span>
-        <span class="k">if</span> <span class="p">(</span><span class="n">platform_min</span> <span class="o">&lt;=</span> <span class="n">px</span> <span class="o">&lt;=</span> <span class="n">platform_max</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
-          <span class="n">platform_min</span> <span class="o">&lt;=</span> <span class="n">py</span> <span class="o">&lt;=</span> <span class="n">platform_max</span>
+        <span class="c1"># Drop stones whose center lies under the (grid-snapped) platform; the</span>
+        <span class="c1"># platform absorbs them. Every remaining stone stays full size and sits</span>
+        <span class="c1"># one gap from the platform, so there are no clipped slivers.</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">platform_min_x</span> <span class="o">&lt;=</span> <span class="n">px</span> <span class="o">&lt;=</span> <span class="n">platform_max_x</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span>
+          <span class="n">platform_min_y</span> <span class="o">&lt;=</span> <span class="n">py</span> <span class="o">&lt;=</span> <span class="n">platform_max_y</span>
         <span class="p">):</span>
           <span class="k">continue</span>
 
@@ -1750,6 +1821,7 @@ document.write(`
   <span class="k">def</span><span class="w"> </span><span class="nf">function</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">difficulty</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">mujoco</span><span class="o">.</span><span class="n">MjSpec</span><span class="p">,</span> <span class="n">rng</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">Generator</span>
   <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TerrainOutput</span><span class="p">:</span>
+    <span class="k">del</span> <span class="n">rng</span>  <span class="c1"># Beam layout is deterministic.</span>
     <span class="n">body</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">body</span><span class="p">(</span><span class="s2">&quot;terrain&quot;</span><span class="p">)</span>
     <span class="n">geometries</span> <span class="o">=</span> <span class="p">[]</span>
 
@@ -1759,6 +1831,19 @@ document.write(`
     <span class="c1"># Narrower beams with difficulty (interp from max to min).</span>
     <span class="n">w_min</span><span class="p">,</span> <span class="n">w_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">beam_width_range</span>
     <span class="n">beam_width</span> <span class="o">=</span> <span class="n">w_max</span> <span class="o">-</span> <span class="n">difficulty</span> <span class="o">*</span> <span class="p">(</span><span class="n">w_max</span> <span class="o">-</span> <span class="n">w_min</span><span class="p">)</span>
+
+    <span class="c1"># Shrink the square platform so its corners stay within the beams&#39; angular</span>
+    <span class="c1"># coverage rather than protruding into the pit between beams. A corner sits at</span>
+    <span class="c1"># radius r*sqrt(2) and, in the worst case, pi/num_beams away from the nearest</span>
+    <span class="c1"># beam, so it is covered while r*sqrt(2)*sin(pi/num_beams) &lt;= beam_width/2.</span>
+    <span class="c1"># Beams thin with difficulty, so the safe radius shrinks with it. The beams</span>
+    <span class="c1"># attach at this same radius (below), so shrinking never opens a fall gap.</span>
+    <span class="n">spacing_sin</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">num_beams</span><span class="p">))</span> <span class="k">if</span> <span class="n">num_beams</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="k">else</span> <span class="mf">0.0</span>
+    <span class="k">if</span> <span class="n">spacing_sin</span> <span class="o">&gt;</span> <span class="mf">1e-9</span><span class="p">:</span>
+      <span class="n">max_no_protrude</span> <span class="o">=</span> <span class="n">beam_width</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span><span class="p">)</span> <span class="o">*</span> <span class="n">spacing_sin</span><span class="p">)</span>
+      <span class="n">platform_radius</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">platform_width</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">,</span> <span class="n">max_no_protrude</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+      <span class="n">platform_radius</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">platform_width</span> <span class="o">/</span> <span class="mf">2.0</span>
 
     <span class="n">border_rgba</span> <span class="o">=</span> <span class="n">darken_rgba</span><span class="p">(</span><span class="n">brand_ramp</span><span class="p">(</span><span class="n">_MUJOCO_BLUE</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="mf">0.85</span><span class="p">)</span>
     <span class="n">z_center</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">beam_height</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">floor_depth</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
@@ -1789,8 +1874,8 @@ document.write(`
     <span class="n">platform_geom</span> <span class="o">=</span> <span class="n">body</span><span class="o">.</span><span class="n">add_geom</span><span class="p">(</span>
       <span class="nb">type</span><span class="o">=</span><span class="n">mujoco</span><span class="o">.</span><span class="n">mjtGeom</span><span class="o">.</span><span class="n">mjGEOM_BOX</span><span class="p">,</span>
       <span class="n">size</span><span class="o">=</span><span class="p">(</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">platform_width</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span>
-        <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">platform_width</span> <span class="o">/</span> <span class="mi">2</span><span class="p">),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">platform_radius</span><span class="p">),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">platform_radius</span><span class="p">),</span>
         <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">,</span> <span class="n">half_height</span><span class="p">),</span>
       <span class="p">),</span>
       <span class="n">pos</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">z_center</span><span class="p">),</span>
@@ -1801,7 +1886,6 @@ document.write(`
 
     <span class="n">inner_size</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span>
     <span class="n">center_x</span><span class="p">,</span> <span class="n">center_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span>
-    <span class="n">platform_radius</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">platform_width</span> <span class="o">/</span> <span class="mi">2</span>
 
     <span class="c1"># Radial beams as columns.</span>
     <span class="n">angles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">num_beams</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
@@ -1990,6 +2074,8 @@ document.write(`
   <span class="n">ring_width_range</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">)</span>
   <span class="n">gap_range</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">)</span>
   <span class="n">height_range</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.4</span><span class="p">)</span>
+<span class="w">  </span><span class="sd">&quot;&quot;&quot;Min and max ring height, in meters. All rings share a single fixed height</span>
+<span class="sd">  taken as the midpoint of this range; difficulty does not scale it.&quot;&quot;&quot;</span>
   <span class="n">platform_width</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span>
   <span class="n">border_width</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.25</span>
   <span class="n">floor_depth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2.0</span>
@@ -1999,20 +2085,25 @@ document.write(`
   <span class="k">def</span><span class="w"> </span><span class="nf">function</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">difficulty</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">spec</span><span class="p">:</span> <span class="n">mujoco</span><span class="o">.</span><span class="n">MjSpec</span><span class="p">,</span> <span class="n">rng</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">Generator</span>
   <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">TerrainOutput</span><span class="p">:</span>
+    <span class="k">del</span> <span class="n">rng</span>  <span class="c1"># Ring layout is deterministic.</span>
     <span class="n">body</span> <span class="o">=</span> <span class="n">spec</span><span class="o">.</span><span class="n">body</span><span class="p">(</span><span class="s2">&quot;terrain&quot;</span><span class="p">)</span>
     <span class="n">geometries</span> <span class="o">=</span> <span class="p">[]</span>
 
-    <span class="c1"># Difficulty scaling: wider width range and higher average height.</span>
-    <span class="n">h_scale</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">difficulty</span> <span class="o">*</span> <span class="mf">0.5</span>
+    <span class="c1"># Concentric ridges of a single fixed height. Difficulty controls</span>
+    <span class="c1"># gap-crossing only: gaps widen and rings narrow, so the terrain reads</span>
+    <span class="c1"># consistently across difficulty instead of weakly scaling height.</span>
     <span class="n">w_min</span><span class="p">,</span> <span class="n">w_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ring_width_range</span>
     <span class="n">ring_width</span> <span class="o">=</span> <span class="n">w_max</span> <span class="o">-</span> <span class="n">difficulty</span> <span class="o">*</span> <span class="p">(</span><span class="n">w_max</span> <span class="o">-</span> <span class="n">w_min</span><span class="p">)</span>
 
+    <span class="n">ring_height</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">height_range</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">height_range</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">ring_rgba</span> <span class="o">=</span> <span class="n">brand_ramp</span><span class="p">(</span><span class="n">_MUJOCO_BLUE</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">)</span>
+
     <span class="n">border_rgba</span> <span class="o">=</span> <span class="n">darken_rgba</span><span class="p">(</span><span class="n">brand_ramp</span><span class="p">(</span><span class="n">_MUJOCO_BLUE</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">),</span> <span class="mf">0.85</span><span class="p">)</span>
-    <span class="c1"># Use ground level z=0 as top of border/beams for consistency with NarrowBeams.</span>
-    <span class="c1"># In beam terrain, border top was at beam_height.</span>
 
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">border_width</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
-      <span class="n">border_h</span> <span class="o">=</span> <span class="mf">0.5</span>
+      <span class="c1"># Outer border wall matches the ring height so there is no arbitrary</span>
+      <span class="c1"># crossover between the two as difficulty changes.</span>
+      <span class="n">border_h</span> <span class="o">=</span> <span class="n">ring_height</span>
       <span class="n">border_center</span> <span class="o">=</span> <span class="p">(</span>
         <span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
         <span class="mf">0.5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
@@ -2048,12 +2139,9 @@ document.write(`
     <span class="n">gap_min</span><span class="p">,</span> <span class="n">gap_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gap_range</span>
     <span class="n">gap</span> <span class="o">=</span> <span class="n">gap_min</span> <span class="o">+</span> <span class="n">difficulty</span> <span class="o">*</span> <span class="p">(</span><span class="n">gap_max</span> <span class="o">-</span> <span class="n">gap_min</span><span class="p">)</span>
 
-    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_rings</span><span class="p">):</span>
-      <span class="c1"># Ring k: randomized height.</span>
-      <span class="n">h</span> <span class="o">=</span> <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">height_range</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">height_range</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">h_scale</span>
-
-      <span class="n">t</span> <span class="o">=</span> <span class="n">k</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_rings</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-      <span class="n">rgba</span> <span class="o">=</span> <span class="n">brand_ramp</span><span class="p">(</span><span class="n">_MUJOCO_BLUE</span><span class="p">,</span> <span class="n">t</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">num_rings</span><span class="p">):</span>
+      <span class="n">h</span> <span class="o">=</span> <span class="n">ring_height</span>
+      <span class="n">rgba</span> <span class="o">=</span> <span class="n">ring_rgba</span>
 
       <span class="c1"># Outer dimensions of this ring.</span>
       <span class="n">ring_outer_size</span> <span class="o">=</span> <span class="p">(</span>
@@ -2121,7 +2209,8 @@ document.write(`
       <span class="p">),</span>  <span class="c1"># Fill the ring hole + gap area.</span>
       <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mf">1e-2</span><span class="p">,</span> <span class="n">current_outer_size</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">gap</span><span class="p">),</span>
     <span class="p">)</span>
-    <span class="n">platform_h</span> <span class="o">=</span> <span class="mf">0.2</span>
+    <span class="c1"># Center pad sits flush with the ring height.</span>
+    <span class="n">platform_h</span> <span class="o">=</span> <span class="n">ring_height</span>
 
     <span class="n">platform_half_h</span> <span class="o">=</span> <span class="p">(</span><span class="n">platform_h</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">floor_depth</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
     <span class="n">platform_z</span> <span class="o">=</span> <span class="p">(</span><span class="n">platform_h</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">floor_depth</span><span class="p">)</span> <span class="o">/</span> <span class="mi">2</span>
@@ -2185,7 +2274,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on May 15, 2026.
+  Last updated on Nov 27, 2026.
   <br/>
 </p>
   </div>

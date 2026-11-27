@@ -56,7 +56,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="May 15, 2026"/>
+    <meta name="docbuild:last-update" content="Nov 27, 2026"/>
   </head>
   
   
@@ -195,6 +195,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/tactile_sensor.html">Tactile Sensor</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../source/scene.html">Scene</a></li>
@@ -590,7 +591,6 @@ document.write(`
   <span class="n">last_air_time</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
   <span class="n">current_contact_time</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
   <span class="n">last_contact_time</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
-  <span class="n">last_time</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
 
 
 <div class="viewcode-block" id="ContactData">
@@ -739,7 +739,6 @@ document.write(`
         <span class="n">last_air_time</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_envs</span><span class="p">,</span> <span class="n">n_primary</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">),</span>
         <span class="n">current_contact_time</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_envs</span><span class="p">,</span> <span class="n">n_primary</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">),</span>
         <span class="n">last_contact_time</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_envs</span><span class="p">,</span> <span class="n">n_primary</span><span class="p">),</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">),</span>
-        <span class="n">last_time</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">n_envs</span><span class="p">,),</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">),</span>
       <span class="p">)</span>
 
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">history_length</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
@@ -787,8 +786,6 @@ document.write(`
       <span class="bp">self</span><span class="o">.</span><span class="n">_air_time_state</span><span class="o">.</span><span class="n">last_air_time</span><span class="p">[</span><span class="n">env_ids</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_air_time_state</span><span class="o">.</span><span class="n">current_contact_time</span><span class="p">[</span><span class="n">env_ids</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_air_time_state</span><span class="o">.</span><span class="n">last_contact_time</span><span class="p">[</span><span class="n">env_ids</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
-      <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_air_time_state</span><span class="o">.</span><span class="n">last_time</span><span class="p">[</span><span class="n">env_ids</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">time</span><span class="p">[</span><span class="n">env_ids</span><span class="p">]</span>
 
     <span class="c1"># Reset history state for specified envs.</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_history_state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -801,7 +798,7 @@ document.write(`
   <span class="k">def</span><span class="w"> </span><span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_air_time_state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-      <span class="bp">self</span><span class="o">.</span><span class="n">_update_air_time_tracking</span><span class="p">()</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_update_air_time_tracking</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span>
     <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_history_state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
       <span class="bp">self</span><span class="o">.</span><span class="n">_update_history</span><span class="p">()</span></div>
 
@@ -879,17 +876,18 @@ document.write(`
 
     <span class="k">return</span> <span class="n">data</span>
 
-  <span class="k">def</span><span class="w"> </span><span class="nf">_update_air_time_tracking</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+  <span class="k">def</span><span class="w"> </span><span class="nf">_update_air_time_tracking</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_air_time_state</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
 
     <span class="n">contact_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_sensor_data</span><span class="p">()</span>
     <span class="k">if</span> <span class="n">contact_data</span><span class="o">.</span><span class="n">found</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="s2">&quot;found&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfg</span><span class="o">.</span><span class="n">fields</span><span class="p">:</span>
       <span class="k">return</span>
 
-    <span class="k">assert</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-    <span class="n">current_time</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data</span><span class="o">.</span><span class="n">time</span>
-    <span class="n">elapsed_time</span> <span class="o">=</span> <span class="n">current_time</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_air_time_state</span><span class="o">.</span><span class="n">last_time</span>
-    <span class="n">elapsed_time</span> <span class="o">=</span> <span class="n">elapsed_time</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c1"># Accumulate the exact float64 substep dt rather than differencing the</span>
+    <span class="c1"># float32 sim clock (`data.time`). The clock&#39;s quantization error grows with</span>
+    <span class="c1"># its magnitude (ULP ~= time * 1.2e-7) and, since `data.time` is never reset</span>
+    <span class="c1"># on env reset, it eventually swamps the abs_tol in compute_first_contact.</span>
+    <span class="n">elapsed_time</span> <span class="o">=</span> <span class="n">dt</span>
 
     <span class="c1"># Reduce `found` from [B, P*num_slots] to [B, P]: a primary is in contact</span>
     <span class="c1"># if any of its slots reports a match. Air-time is tracked per primary.</span>
@@ -923,8 +921,6 @@ document.write(`
       <span class="n">state</span><span class="o">.</span><span class="n">current_contact_time</span> <span class="o">+</span> <span class="n">elapsed_time</span><span class="p">,</span>
       <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">current_contact_time</span><span class="p">),</span>
     <span class="p">)</span>
-
-    <span class="n">state</span><span class="o">.</span><span class="n">last_time</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">current_time</span>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">_update_history</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Roll history buffer and insert current contact data at index 0.&quot;&quot;&quot;</span>
@@ -1159,7 +1155,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on May 15, 2026.
+  Last updated on Nov 27, 2026.
   <br/>
 </p>
   </div>

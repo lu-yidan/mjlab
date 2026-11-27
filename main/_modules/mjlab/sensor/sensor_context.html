@@ -56,7 +56,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="May 15, 2026"/>
+    <meta name="docbuild:last-update" content="Nov 27, 2026"/>
   </head>
   
   
@@ -195,6 +195,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/tactile_sensor.html">Tactile Sensor</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../source/scene.html">Scene</a></li>
@@ -420,11 +421,11 @@ document.write(`
 
 <span class="nd">@wp</span><span class="o">.</span><span class="n">kernel</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">_unpack_rgb_kernel</span><span class="p">(</span>
-  <span class="n">packed</span><span class="p">:</span> <span class="n">wp</span><span class="o">.</span><span class="n">array2d</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">wp</span><span class="o">.</span><span class="n">uint32</span><span class="p">),</span>  <span class="c1"># type: ignore[valid-type]</span>
-  <span class="n">rgb</span><span class="p">:</span> <span class="n">wp</span><span class="o">.</span><span class="n">array3d</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">wp</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span>  <span class="c1"># type: ignore[valid-type]</span>
+  <span class="n">packed</span><span class="p">:</span> <span class="n">wp</span><span class="o">.</span><span class="n">array2d</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">wp</span><span class="o">.</span><span class="n">uint32</span><span class="p">),</span>  <span class="c1"># ty: ignore[invalid-type-form]</span>
+  <span class="n">rgb</span><span class="p">:</span> <span class="n">wp</span><span class="o">.</span><span class="n">array3d</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">wp</span><span class="o">.</span><span class="n">uint8</span><span class="p">),</span>  <span class="c1"># ty: ignore[invalid-type-form]</span>
 <span class="p">):</span>
 <span class="w">  </span><span class="sd">&quot;&quot;&quot;Unpack ABGR uint32 pixels into separate R, G, B uint8 channels.&quot;&quot;&quot;</span>
-  <span class="n">world_idx</span><span class="p">,</span> <span class="n">pixel_idx</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">tid</span><span class="p">()</span>  <span class="c1"># type: ignore[attr-defined]</span>
+  <span class="n">world_idx</span><span class="p">,</span> <span class="n">pixel_idx</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">tid</span><span class="p">()</span>  <span class="c1"># ty: ignore[invalid-assignment, not-iterable]</span>
   <span class="n">val</span> <span class="o">=</span> <span class="n">packed</span><span class="p">[</span><span class="n">world_idx</span><span class="p">,</span> <span class="n">pixel_idx</span><span class="p">]</span>
   <span class="n">b</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">uint8</span><span class="p">(</span><span class="n">val</span> <span class="o">&amp;</span> <span class="n">wp</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="mh">0xFF</span><span class="p">))</span>
   <span class="n">g</span> <span class="o">=</span> <span class="n">wp</span><span class="o">.</span><span class="n">uint8</span><span class="p">((</span><span class="n">val</span> <span class="o">&gt;&gt;</span> <span class="n">wp</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="mi">8</span><span class="p">))</span> <span class="o">&amp;</span> <span class="n">wp</span><span class="o">.</span><span class="n">uint32</span><span class="p">(</span><span class="mh">0xFF</span><span class="p">))</span>
@@ -533,7 +534,10 @@ document.write(`
   <span class="k">def</span><span class="w"> </span><span class="nf">finalize</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Post-graph: compute raycast hit positions.&quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">sensor</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">raycast_sensors</span><span class="p">:</span>
-      <span class="n">sensor</span><span class="o">.</span><span class="n">postprocess_rays</span><span class="p">()</span></div>
+      <span class="n">sensor</span><span class="o">.</span><span class="n">postprocess_rays</span><span class="p">()</span>
+    <span class="c1"># Drop data cached by a pre-sense read so it reflects the new buffers.</span>
+    <span class="k">for</span> <span class="n">sensor</span> <span class="ow">in</span> <span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">raycast_sensors</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">camera_sensors</span><span class="p">):</span>
+      <span class="n">sensor</span><span class="o">.</span><span class="n">_invalidate_cache</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="SensorContext.get_rgb">
@@ -750,6 +754,8 @@ document.write(`
         <span class="n">cam_active</span><span class="o">=</span><span class="n">cam_active</span><span class="p">,</span>
         <span class="n">use_precomputed_rays</span><span class="o">=</span><span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_disable_precomputed_rays</span><span class="p">,</span>
         <span class="n">render_seg</span><span class="o">=</span><span class="n">render_seg</span><span class="p">,</span>
+        <span class="n">render_skybox</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">background_color</span><span class="o">=</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span>
       <span class="p">)</span>
 
     <span class="c1"># Cache address arrays from the render context. An adr value of -1 means that data</span>
@@ -856,7 +862,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on May 15, 2026.
+  Last updated on Nov 27, 2026.
   <br/>
 </p>
   </div>

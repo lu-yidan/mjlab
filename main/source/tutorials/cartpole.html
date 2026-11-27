@@ -61,7 +61,7 @@
     <link rel="prev" title="Tutorials" href="../tutorials.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="Nov 11, 2026"/>
+    <meta name="docbuild:last-update" content="Nov 27, 2026"/>
   </head>
   
   
@@ -198,6 +198,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../sensors/raycast_sensor.html">RayCast Sensor</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../sensors/rgbd_camera.html">RGB-D Camera</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../sensors/tactile_sensor.html">Tactile Sensor</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../scene.html">Scene</a></li>
@@ -830,8 +831,8 @@ config is in <code class="docutils literal notranslate"><span class="pre">cartpo
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>train<span class="w"> </span>Mjlab-Cartpole-Swingup<span class="w"> </span>--env.scene.num-envs<span class="w"> </span><span class="m">4096</span>
 </pre></div>
 </div>
-<p>Play back a trained checkpoint, either from a local file or a W&amp;B run:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>play<span class="w"> </span>Mjlab-Cartpole-Swingup<span class="w"> </span>--checkpoint-file<span class="w"> </span>logs/rsl_rl/cartpole/model_500.pt
+<p>Play back the newest local checkpoint, or one from a W&amp;B run:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>uv<span class="w"> </span>run<span class="w"> </span>play<span class="w"> </span>Mjlab-Cartpole-Swingup<span class="w"> </span>--checkpoint-file<span class="w"> </span>latest
 uv<span class="w"> </span>run<span class="w"> </span>play<span class="w"> </span>Mjlab-Cartpole-Swingup<span class="w"> </span>--wandb-run-path<span class="w"> </span>&lt;user/project/run_id&gt;
 </pre></div>
 </div>
@@ -971,7 +972,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on Nov 11, 2026.
+  Last updated on Nov 27, 2026.
   <br/>
 </p>
   </div>

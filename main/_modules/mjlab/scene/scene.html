@@ -56,7 +56,7 @@
     <link rel="search" title="Search" href="../../../search.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
-    <meta name="docbuild:last-update" content="May 15, 2026"/>
+    <meta name="docbuild:last-update" content="Nov 27, 2026"/>
   </head>
   
   
@@ -195,6 +195,7 @@
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../../source/sensors/index.html">Sensors</a><details><summary><span class="toctree-toggle" role="presentation"><i class="fa-solid fa-chevron-down"></i></span></summary><ul>
 <li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/raycast_sensor.html">RayCast Sensor</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/rgbd_camera.html">RGB-D Camera</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../source/sensors/tactile_sensor.html">Tactile Sensor</a></li>
 </ul>
 </details></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../source/scene.html">Scene</a></li>
@@ -418,7 +419,12 @@ document.write(`
 <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.sensor.camera_sensor</span><span class="w"> </span><span class="kn">import</span> <span class="n">CameraSensor</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.sensor.sensor_context</span><span class="w"> </span><span class="kn">import</span> <span class="n">SensorContext</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.terrains.terrain_entity</span><span class="w"> </span><span class="kn">import</span> <span class="n">TerrainEntity</span><span class="p">,</span> <span class="n">TerrainEntityCfg</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.utils.spec</span><span class="w"> </span><span class="kn">import</span> <span class="n">export_spec</span><span class="p">,</span> <span class="n">non_default_option_fields</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mjlab.utils.spec</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+  <span class="n">attach_unprefixed</span><span class="p">,</span>
+  <span class="n">compile_spec</span><span class="p">,</span>
+  <span class="n">export_spec</span><span class="p">,</span>
+  <span class="n">non_default_option_fields</span><span class="p">,</span>
+<span class="p">)</span>
 
 <span class="n">_SCENE_XML</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="s2">&quot;scene.xml&quot;</span>
 
@@ -479,7 +485,7 @@ document.write(`
 
 
   <span class="k">def</span><span class="w"> </span><span class="nf">compile</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mujoco</span><span class="o">.</span><span class="n">MjModel</span><span class="p">:</span>
-    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spec</span><span class="o">.</span><span class="n">compile</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">compile_spec</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_spec</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Scene.write">
 <a class="viewcode-back" href="../../../source/api/scene.html#mjlab.scene.Scene.write">[docs]</a>
@@ -495,7 +501,14 @@ document.write(`
 <span class="sd">      output_dir: Destination directory (created if it doesn&#39;t exist).</span>
 <span class="sd">      zip: If True, produce ``&lt;output_dir&gt;.zip`` instead of a directory.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">export_spec</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_spec</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="nb">zip</span><span class="o">=</span><span class="nb">zip</span><span class="p">)</span></div>
+    <span class="n">spec</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spec</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="c1"># Entity meshes compile straight from disk, so spec.assets holds no mesh bytes.</span>
+    <span class="k">for</span> <span class="n">ent</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_entities</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+      <span class="k">for</span> <span class="n">mesh</span> <span class="ow">in</span> <span class="n">ent</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">meshes</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">ent</span><span class="o">.</span><span class="n">spec</span><span class="o">.</span><span class="n">modelfiledir</span><span class="p">)</span> <span class="o">/</span> <span class="n">mesh</span><span class="o">.</span><span class="n">compiler</span><span class="o">.</span><span class="n">meshdir</span> <span class="o">/</span> <span class="n">mesh</span><span class="o">.</span><span class="n">file</span>
+        <span class="k">if</span> <span class="n">mesh</span><span class="o">.</span><span class="n">file</span> <span class="ow">and</span> <span class="n">mesh</span><span class="o">.</span><span class="n">file</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">spec</span><span class="o">.</span><span class="n">assets</span> <span class="ow">and</span> <span class="n">path</span><span class="o">.</span><span class="n">is_file</span><span class="p">():</span>
+          <span class="n">spec</span><span class="o">.</span><span class="n">assets</span><span class="p">[</span><span class="n">mesh</span><span class="o">.</span><span class="n">file</span><span class="p">]</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">read_bytes</span><span class="p">()</span>
+    <span class="n">export_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="nb">zip</span><span class="o">=</span><span class="nb">zip</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Scene.to_zip">
@@ -618,9 +631,21 @@ document.write(`
     <span class="k">for</span> <span class="n">sensor</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sensors</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
       <span class="n">sensor</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span>
 
-  <span class="k">def</span><span class="w"> </span><span class="nf">write_data_to_sim</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="Scene.invalidate_sensor_caches">
+<a class="viewcode-back" href="../../../source/api/scene.html#mjlab.scene.Scene.invalidate_sensor_caches">[docs]</a>
+  <span class="k">def</span><span class="w"> </span><span class="nf">invalidate_sensor_caches</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Drop every sensor&#39;s cached data, e.g. after the sim data changed.&quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">sensor</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sensors</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+      <span class="n">sensor</span><span class="o">.</span><span class="n">_invalidate_cache</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="Scene.write_data_to_sim">
+<a class="viewcode-back" href="../../../source/api/scene.html#mjlab.scene.Scene.write_data_to_sim">[docs]</a>
+  <span class="k">def</span><span class="w"> </span><span class="nf">write_data_to_sim</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env_ids</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Write controls for a physics step, or initialize env_ids after a reset.&quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">ent</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_entities</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
-      <span class="n">ent</span><span class="o">.</span><span class="n">write_data_to_sim</span><span class="p">()</span>
+      <span class="n">ent</span><span class="o">.</span><span class="n">write_data_to_sim</span><span class="p">(</span><span class="n">env_ids</span><span class="p">)</span></div>
+
 
   <span class="c1"># Private methods.</span>
 
@@ -680,7 +705,7 @@ document.write(`
         <span class="n">stacklevel</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
       <span class="p">)</span>
     <span class="n">frame</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_spec</span><span class="o">.</span><span class="n">worldbody</span><span class="o">.</span><span class="n">add_frame</span><span class="p">()</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">_spec</span><span class="o">.</span><span class="n">attach</span><span class="p">(</span><span class="n">terrain</span><span class="o">.</span><span class="n">spec</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">frame</span><span class="o">=</span><span class="n">frame</span><span class="p">)</span>
+    <span class="n">attach_unprefixed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_spec</span><span class="p">,</span> <span class="n">terrain</span><span class="o">.</span><span class="n">spec</span><span class="p">,</span> <span class="n">frame</span><span class="p">)</span>
 
   <span class="k">def</span><span class="w"> </span><span class="nf">_add_sensors</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">for</span> <span class="n">sensor_cfg</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cfg</span><span class="o">.</span><span class="n">sensors</span><span class="p">:</span>
@@ -739,7 +764,7 @@ By The mjlab Developers
   
   <div class="footer-item">
     <p class="last-updated">
-  Last updated on May 15, 2026.
+  Last updated on Nov 27, 2026.
   <br/>
 </p>
   </div>
